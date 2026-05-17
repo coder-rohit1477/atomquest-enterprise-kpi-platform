@@ -1,0 +1,166 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id                    String                 @id @default(cuid())
+  name                  String?
+  email                 String?                @unique
+  password              String?
+  role                  Role                   @default(EMPLOYEE)
+  image                 String?
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
+  managerId             String?
+  goals                 Goal[]
+  notifications         Notification[]
+  sharedGoalAssignments SharedGoalAssignment[]
+  manager               User?                  @relation("ManagerToEmployee", fields: [managerId], references: [id])
+  employees             User[]                 @relation("ManagerToEmployee")
+
+  @@map("users")
+}
+
+model Goal {
+  id              String                 @id @default(cuid())
+  title           String
+  description     String?
+  thrustArea      String
+  uom             String
+  target          Float
+  weightage       Int
+  status          GoalStatus             @default(DRAFT)
+  managerComment  String?
+  userId          String
+  createdAt       DateTime               @default(now())
+  updatedAt       DateTime               @updatedAt
+  isShared        Boolean                @default(false)
+  sharedGoalId    String?
+  history         ApprovalHistory[]
+  user            User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  progressHistory ProgressHistory[]
+  checkIns        QuarterlyCheckIn[]
+  assignments     SharedGoalAssignment[] @relation("GoalAssignments")
+
+  @@map("goals")
+}
+
+model SharedGoalAssignment {
+  id        String   @id @default(cuid())
+  goalId    String
+  userId    String
+  createdAt DateTime @default(now())
+  goal      Goal     @relation("GoalAssignments", fields: [goalId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([goalId, userId])
+  @@map("shared_goal_assignments")
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  userId     String
+  action     String
+  entityType String
+  entityId   String?
+  details    String?
+  createdAt  DateTime @default(now())
+
+  @@map("audit_logs")
+}
+
+model ApprovalHistory {
+  id         String     @id @default(cuid())
+  goalId     String
+  fromStatus GoalStatus
+  toStatus   GoalStatus
+  comment    String?
+  actionBy   String
+  createdAt  DateTime   @default(now())
+  goal       Goal       @relation(fields: [goalId], references: [id], onDelete: Cascade)
+
+  @@map("approval_history")
+}
+
+model QuarterlyCheckIn {
+  id              String           @id @default(cuid())
+  goalId          String
+  quarter         Int
+  year            Int
+  progress        Float
+  accomplishments String
+  challenges      String?
+  nextSteps       String?
+  status          CheckInStatus    @default(ON_TRACK)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  managerFeedback ManagerFeedback?
+  goal            Goal             @relation(fields: [goalId], references: [id], onDelete: Cascade)
+
+  @@unique([goalId, quarter, year])
+  @@map("quarterly_check_ins")
+}
+
+model ManagerFeedback {
+  id            String           @id @default(cuid())
+  checkInId     String           @unique
+  comment       String
+  isConcern     Boolean          @default(false)
+  requestUpdate Boolean          @default(false)
+  managerId     String
+  createdAt     DateTime         @default(now())
+  checkIn       QuarterlyCheckIn @relation(fields: [checkInId], references: [id], onDelete: Cascade)
+
+  @@map("manager_feedback")
+}
+
+model ProgressHistory {
+  id        String        @id @default(cuid())
+  goalId    String
+  progress  Float
+  status    CheckInStatus
+  updatedBy String
+  createdAt DateTime      @default(now())
+  goal      Goal          @relation(fields: [goalId], references: [id], onDelete: Cascade)
+
+  @@map("progress_history")
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String
+  message   String
+  type      String
+  isRead    Boolean  @default(false)
+  link      String?
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notifications")
+}
+
+enum Role {
+  EMPLOYEE
+  MANAGER
+  ADMIN
+}
+
+enum GoalStatus {
+  DRAFT
+  PENDING_APPROVAL
+  APPROVED
+  REJECTED
+  LOCKED
+}
+
+enum CheckInStatus {
+  ON_TRACK
+  AT_RISK
+  DELAYED
+  COMPLETED
+}
