@@ -54,7 +54,7 @@ export function ManagerFeedbackForm({ checkInId, onSuccess, defaultValues }: Man
         toast.success("Feedback submitted successfully");
         onSuccess?.();
       } else {
-        toast.error(result.error || "Failed to submit feedback");
+        toast.error("Failed to submit feedback");
       }
     } catch (error) {
       toast.error("An unexpected error occurred");

@@ -23,10 +23,10 @@ export default async function ReportsPage({
   if (!userId) return null;
 
   // Aggregate data for reports
-  let goals = [];
+  let goals: any[] = [];
   let allUsersCount = 0;
   let sharedGoalParticipationCount = 0;
-  let overdueCheckIns = [];
+  let overdueCheckIns: any[] = [];
   let atRiskGoalsCount = 0;
 
   const baseGoalQuery: any = {};
@@ -55,7 +55,7 @@ export default async function ReportsPage({
     const currentYear = 2026;
     overdueCheckIns = goals.filter(g => 
       (g.status === "APPROVED" || g.status === "LOCKED") && 
-      !g.checkIns.some(ci => ci.quarter === currentQuarter && ci.year === currentYear)
+      !g.checkIns.some((ci: any) => ci.quarter === currentQuarter && ci.year === currentYear)
     );
   } else if (role === "MANAGER") {
     goals = await prisma.goal.findMany({

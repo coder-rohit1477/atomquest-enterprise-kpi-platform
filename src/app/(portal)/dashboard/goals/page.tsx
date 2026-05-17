@@ -61,12 +61,12 @@ import { GoalStatus } from "@prisma/client";
 
 const GoalSchema = z.object({
   id: z.string().optional(),
-  title: z.string().min(3, "Title must be at least 3 characters"),
+  title: z.string().min(1, "Title is required"),
   description: z.string().optional(),
-  thrustArea: z.string().min(1, "Thrust Area is required"),
-  uom: z.string().min(1, "Unit of Measure is required"),
-  target: z.coerce.number().min(1, "Target must be at least 1"),
-  weightage: z.coerce.number().min(10, "Minimum weightage is 10%").max(100, "Maximum weightage is 100%"),
+  thrustArea: z.string().min(1, "Thrust area is required"),
+  uom: z.string().min(1, "Unit of measurement is required"),
+  target: z.coerce.number().min(1),
+  weightage: z.coerce.number().min(1).max(100),
 });
 
 type GoalFormValues = z.infer<typeof GoalSchema>;
@@ -587,7 +587,6 @@ export default function GoalsPage() {
                           type="number" 
                           step="0.01" 
                           {...field} 
-                          onChange={(e) => field.onChange(e.target.valueAsNumber || 0)}
                           className="h-14 rounded-2xl border-slate-200 font-black" 
                         />
                       </FormControl>
@@ -608,7 +607,6 @@ export default function GoalsPage() {
                           min="10" 
                           max="100" 
                           {...field} 
-                          onChange={(e) => field.onChange(e.target.valueAsNumber || 0)}
                           className="h-14 rounded-2xl border-slate-200 font-black" 
                         />
                       </FormControl>

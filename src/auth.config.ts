@@ -32,10 +32,10 @@ export const authConfig = {
     },
     async session({ session, token }) {
       if (token.role && session.user) {
-        session.user.role = token.role;
+        (session.user as any).role = token.role as string;
       }
       if (token.id && session.user) {
-        session.user.id = token.id;
+        (session.user as any).id = token.id as string;
       }
       return session;
     },

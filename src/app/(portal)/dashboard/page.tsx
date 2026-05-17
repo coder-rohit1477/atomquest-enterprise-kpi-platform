@@ -81,7 +81,7 @@ export default async function DashboardPage() {
   }));
 
   // Governance Summary Metrics for Admin/Manager
-  let governanceMetrics = [];
+  let governanceMetrics: { label: string; count: number; color: string }[] = [];
   if (role !== "EMPLOYEE") {
      const overdueCount = await prisma.goal.count({
        where: {
