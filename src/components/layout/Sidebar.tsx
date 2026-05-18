@@ -9,7 +9,8 @@ import {
   Briefcase,
   Shield,
   BarChart3,
-  CheckSquare
+  CheckSquare,
+  AlertTriangle
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -40,6 +41,7 @@ export default async function Sidebar() {
     ...commonNav,
     { title: "Analytics", href: "/reports", icon: BarChart3 },
     { title: "User Control", href: "/admin/users", icon: Users },
+    { title: "Escalations", href: "/admin/escalations", icon: AlertTriangle },
     { title: "System Logs", href: "/admin/logs", icon: Shield },
   ];
 

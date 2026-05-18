@@ -2,12 +2,15 @@ import Sidebar from "@/components/layout/Sidebar";
 import { MobileHeader } from "@/components/layout/MobileHeader";
 import { DesktopHeader } from "@/components/layout/DesktopHeader";
 import { auth } from "@/auth";
+import { startEscalationScheduler } from "@/lib/escalation/scheduler";
 
 export default async function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  startEscalationScheduler();
+
   const session = await auth();
   const user = session?.user as { name?: string | null; role?: string };
 
