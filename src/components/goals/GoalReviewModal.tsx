@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -36,12 +36,6 @@ export function GoalReviewModal({ goal, isOpen, onClose, onActionComplete }: Goa
   const isPendingApproval = goal.status === "PENDING_APPROVAL";
   const trimmedComment = comment.trim();
   const canSaveFeedback = trimmedComment.length > 0 && !isSavingFeedback && !isSubmittingAction;
-
-  useEffect(() => {
-    setTarget(goal.target);
-    setWeightage(goal.weightage);
-    setComment(goal.managerComment ?? "");
-  }, [goal.id, goal.target, goal.weightage, goal.managerComment]);
 
   const onAction = async (action: "APPROVE" | "REJECT" | "REWORK") => {
     if (!isPendingApproval) {
