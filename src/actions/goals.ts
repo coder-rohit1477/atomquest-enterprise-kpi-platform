@@ -7,6 +7,11 @@ import { z } from "zod";
 import { GoalStatus } from "@prisma/client";
 import { createNotification } from "./notifications";
 import { createAuditLog } from "./audit";
+import {
+  sendGoalApprovedEmail,
+  sendGoalRejectedEmail,
+  sendGoalSubmittedEmail,
+} from "@/lib/email/send-email";
 
 const GoalSchema = z.object({
   id: z.string().optional(),
@@ -289,6 +294,12 @@ export async function submitGoals() {
     where: { id: session.user.id },
     select: { name: true, managerId: true }
   });
+  const manager = user?.managerId
+    ? await prisma.user.findUnique({
+        where: { id: user.managerId },
+        select: { email: true, name: true },
+      })
+    : null;
 
   if (goals.length === 0) return { error: "No goals to submit." };
 
@@ -336,6 +347,20 @@ export async function submitGoals() {
       );
     }
   });
+
+  if (manager?.email) {
+    try {
+      const goalTitles = goalsToSubmit.map((goal) => goal.title).slice(0, 3).join(", ");
+      await sendGoalSubmittedEmail({
+        to: manager.email,
+        recipientName: manager.name,
+        goalTitle: goalTitles || "Strategic goals",
+        actorName: user?.name || "An employee",
+      });
+    } catch (error) {
+      console.error("[email] submitGoals notification failed:", error);
+    }
+  }
 
   revalidatePath("/dashboard/goals");
   return { success: true };
@@ -445,6 +470,28 @@ export async function handleManagerAction(
                        action === "REJECT" ? "Goal Rejected" : "Goal Update";
     await createAuditLog(auditAction, "GOAL", goalId, `Action by Manager for ${goal.user.name}`);
   });
+
+  if (goal.user.email && (action === "APPROVE" || action === "REJECT")) {
+    try {
+      if (action === "APPROVE") {
+        await sendGoalApprovedEmail({
+          to: goal.user.email,
+          recipientName: goal.user.name,
+          goalTitle: goal.title,
+          actorName: session.user.name || "Your manager",
+        });
+      } else {
+        await sendGoalRejectedEmail({
+          to: goal.user.email,
+          recipientName: goal.user.name,
+          goalTitle: goal.title,
+          actorName: session.user.name || "Your manager",
+        });
+      }
+    } catch (error) {
+      console.error("[email] handleManagerAction notification failed:", error);
+    }
+  }
 
   revalidatePath("/manager/dashboard");
   revalidatePath("/dashboard/goals");
