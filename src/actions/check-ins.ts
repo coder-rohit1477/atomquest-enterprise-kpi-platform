@@ -32,6 +32,13 @@ export async function submitCheckIn(data: z.infer<typeof CheckInSchema>) {
   if (!session?.user?.id) throw new Error("Unauthorized");
 
   const validated = CheckInSchema.parse(data);
+  if (!Number.isFinite(validated.progress) || validated.progress < 0 || validated.progress > 100) {
+    return { error: "Progress must be between 0 and 100." };
+  }
+  const currentYear = new Date().getFullYear();
+  if (validated.year < currentYear - 1 || validated.year > currentYear + 1) {
+    return { error: "Check-in year is outside the allowed reporting window." };
+  }
 
   const goal = await prisma.goal.findUnique({
     where: { id: validated.goalId },
@@ -210,6 +217,9 @@ export async function addManagerFeedback(data: {
 
   if (!checkIn) throw new Error("Check-in not found");
   if (checkIn.goal.user.managerId !== session.user.id) throw new Error("Unauthorized");
+  if (!data.comment?.trim()) {
+    return { error: "Feedback comment is required." };
+  }
 
   const feedback = await prisma.$transaction(async (tx) => {
     const fb = await tx.managerFeedback.upsert({

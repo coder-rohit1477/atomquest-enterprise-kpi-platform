@@ -51,13 +51,13 @@ export function ManagerFeedbackForm({ checkInId, onSuccess, defaultValues }: Man
     try {
       const result = await addManagerFeedback(values);
       if (result.success) {
-        toast.success("Feedback submitted successfully");
+        toast.success("Feedback saved successfully.");
         onSuccess?.();
       } else {
-        toast.error("Failed to submit feedback");
+        toast.error((result as { error?: string }).error || "Unable to save feedback. Please try again.");
       }
     } catch {
-      toast.error("An unexpected error occurred");
+      toast.error("Unable to save feedback right now. Please try again.");
     } finally {
       setIsSubmitting(false);
     }

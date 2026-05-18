@@ -82,6 +82,13 @@ export async function upsertGoal(data: z.infer<typeof GoalSchema>) {
     }
   }
 
+  if (!Number.isFinite(validated.target) || validated.target <= 0) {
+    return { error: "Target must be a valid number greater than zero." };
+  }
+  if (!Number.isFinite(validated.weightage) || validated.weightage < 10 || validated.weightage > 100) {
+    return { error: "Weightage must be between 10% and 100%." };
+  }
+
   let goal;
   if (validated.id) {
     const existing = await prisma.goal.findUnique({ where: { id: validated.id } });
@@ -138,6 +145,16 @@ export async function saveManagerReviewDraft(
 
   if (goal.user.managerId !== session.user.id) {
     throw new Error("Unauthorized access to employee goal");
+  }
+
+  if (typeof data.target === "number" && (!Number.isFinite(data.target) || data.target <= 0)) {
+    return { error: "Target adjustment must be greater than zero." };
+  }
+  if (typeof data.weightage === "number") {
+    const rounded = Math.round(data.weightage);
+    if (!Number.isFinite(data.weightage) || rounded < 10 || rounded > 100) {
+      return { error: "Weightage adjustment must be between 10% and 100%." };
+    }
   }
 
   const updatedGoal = await prisma.goal.update({
@@ -313,10 +330,16 @@ export async function submitGoals() {
 
   await prisma.$transaction(async (tx) => {
     for (const goal of goalsToSubmit) {
-      await tx.goal.update({
-        where: { id: goal.id },
+      const updated = await tx.goal.updateMany({
+        where: {
+          id: goal.id,
+          status: { in: ["DRAFT", "REJECTED"] },
+        },
         data: { status: "PENDING_APPROVAL" }
       });
+      if (updated.count === 0) {
+        continue;
+      }
 
       await tx.approvalHistory.create({
         data: {
@@ -412,6 +435,18 @@ export async function handleManagerAction(
   if (goal.status === "LOCKED") {
     return { error: "Locked goals cannot be modified." };
   }
+  if (goal.status !== "PENDING_APPROVAL") {
+    return { error: "This goal is no longer pending approval. Refresh and try again." };
+  }
+  if (action === "APPROVE") {
+    if (!Number.isFinite(updates?.target) || (updates?.target ?? 0) <= 0) {
+      return { error: "Approved goals require a valid target greater than zero." };
+    }
+    const roundedWeightage = Math.round(updates?.weightage ?? 0);
+    if (!Number.isFinite(updates?.weightage) || roundedWeightage < 10 || roundedWeightage > 100) {
+      return { error: "Approved goals require weightage between 10% and 100%." };
+    }
+  }
 
   let toStatus: GoalStatus;
   if (action === "APPROVE") toStatus = "LOCKED"; // Requirement: Approved goals become locked
@@ -419,8 +454,11 @@ export async function handleManagerAction(
   else toStatus = "DRAFT"; // Return for rework goes back to draft
 
   await prisma.$transaction(async (tx) => {
-    await tx.goal.update({
-      where: { id: goalId },
+    const updateResult = await tx.goal.updateMany({
+      where: {
+        id: goalId,
+        status: "PENDING_APPROVAL",
+      },
       data: { 
         status: toStatus,
         managerComment: comment,
@@ -428,6 +466,9 @@ export async function handleManagerAction(
         ...(typeof updates?.weightage === "number" ? { weightage: Math.round(updates.weightage) } : {}),
       }
     });
+    if (updateResult.count === 0) {
+      throw new Error("Approval state changed before update.");
+    }
 
     await tx.approvalHistory.create({
       data: {

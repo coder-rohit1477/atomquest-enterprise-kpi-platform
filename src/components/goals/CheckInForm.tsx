@@ -104,13 +104,13 @@ export function CheckInForm({ goalId, uom, target, onSuccess, defaultValues }: C
     try {
       const result = await submitCheckIn(values);
       if (result.success) {
-        toast.success("Check-in submitted successfully");
+        toast.success("Check-in saved successfully.");
         onSuccess?.();
       } else {
-        toast.error(result.error || "Failed to submit check-in");
+        toast.error(result.error || "Unable to save check-in. Please review your inputs and try again.");
       }
     } catch {
-      toast.error("An unexpected error occurred");
+      toast.error("Unable to save check-in right now. Please try again.");
     } finally {
       setIsSubmitting(false);
     }

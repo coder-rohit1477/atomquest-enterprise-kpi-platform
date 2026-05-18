@@ -57,7 +57,17 @@ export default async function UsersPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
-                {users.map((user) => (
+                {users.length === 0 ? (
+                  <tr>
+                    <td colSpan={4} className="px-8 py-16 text-center">
+                      <p className="text-sm font-bold text-slate-700">No user records available.</p>
+                      <p className="mt-1 text-xs font-medium text-slate-500">
+                        Identity entries will appear once user accounts are provisioned.
+                      </p>
+                    </td>
+                  </tr>
+                ) : (
+                  users.map((user) => (
                   <tr key={user.id} className="hover:bg-slate-50/50 transition-colors">
                     <td className="px-8 py-6">
                       <div className="flex items-center gap-4">
@@ -94,7 +104,8 @@ export default async function UsersPage() {
                       <span className="text-sm font-bold text-slate-900">{user._count.goals}</span>
                     </td>
                   </tr>
-                ))}
+                  ))
+                )}
               </tbody>
             </table>
           </div>

@@ -64,10 +64,10 @@ export function GoalReviewModal({ goal, isOpen, onClose, onActionComplete }: Goa
         onActionComplete();
         onClose();
       } else {
-        toast.error(result.error || "Failed to process action");
+        toast.error(result.error || "Unable to process this decision. Refresh and try again.");
       }
     } catch {
-      toast.error("An error occurred");
+      toast.error("Unable to process this decision right now. Please try again.");
     } finally {
       setIsSubmittingAction(false);
     }
@@ -89,7 +89,7 @@ export function GoalReviewModal({ goal, isOpen, onClose, onActionComplete }: Goa
       const errorMessage =
         typeof draftResult.error === "string"
           ? draftResult.error
-          : "Failed to save feedback";
+          : "Unable to save feedback. Please try again.";
 
       if (draftResult.success) {
         setComment(trimmedComment);
@@ -99,7 +99,7 @@ export function GoalReviewModal({ goal, isOpen, onClose, onActionComplete }: Goa
         toast.error(errorMessage);
       }
     } catch {
-      toast.error("Failed to save feedback");
+      toast.error("Unable to save feedback right now. Please try again.");
     } finally {
       setIsSavingFeedback(false);
     }

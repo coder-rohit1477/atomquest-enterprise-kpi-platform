@@ -195,9 +195,14 @@ export default function GoalsPage() {
 
   const refreshGoals = async () => {
     setIsLoading(true);
-    const data = await getGoals();
-    setGoals(data as unknown as GoalData[]);
-    setIsLoading(false);
+    try {
+      const data = await getGoals();
+      setGoals(data as unknown as GoalData[]);
+    } catch {
+      toast.error("Unable to refresh goals right now. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const onSubmit = async (values: GoalFormValues) => {
@@ -207,12 +212,12 @@ export default function GoalsPage() {
         toast.error(result.error);
         return;
       }
-      toast.success(values.id ? "Goal updated successfully" : "New goal created");
+      toast.success(values.id ? "Goal updated successfully." : "Goal created successfully.");
       setIsDialogOpen(false);
       form.reset();
       await refreshGoals();
     } catch {
-      toast.error("An unexpected error occurred while saving.");
+      toast.error("Unable to save goal right now. Please try again.");
     }
   };
 
@@ -227,7 +232,7 @@ export default function GoalsPage() {
       toast.success("Goal removed");
       await refreshGoals();
     } catch {
-      toast.error("Failed to delete goal");
+      toast.error("Unable to delete goal right now. Please try again.");
     }
   };
 
@@ -238,11 +243,11 @@ export default function GoalsPage() {
       if (result.error) {
         toast.error(result.error);
       } else {
-        toast.success("All goals submitted for manager review");
+        toast.success("Goals submitted for manager review.");
         await refreshGoals();
       }
     } catch {
-      toast.error("Submission failed. Please check your connection.");
+      toast.error("Unable to submit goals right now. Please try again.");
     } finally {
       setIsSubmitLoading(false);
     }
