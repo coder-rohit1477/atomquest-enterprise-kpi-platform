@@ -43,15 +43,15 @@ export default async function CheckInsPage() {
         <p className="text-slate-500 mt-2 text-lg font-medium italic">Execute progress updates and accomplishment telemetry for active objectives.</p>
       </div>
 
-      <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid auto-rows-fr items-stretch gap-6 md:grid-cols-2 lg:grid-cols-3 lg:gap-8">
         {goals.map((goal) => {
           const latestCheckIn = goal.checkIns[0];
           const progress = latestCheckIn?.progress || 0;
           const isLockedGoal = String(goal.status) === "LOCKED" || String(goal.status) === "LOCKED_APPROVED";
           
           return (
-            <Card key={goal.id} className="border-none shadow-[0_8px_30px_rgb(0,0,0,0.02)] rounded-[32px] overflow-hidden bg-white flex flex-col group hover:shadow-[0_20px_50px_rgba(0,0,0,0.06)] transition-all duration-500">
-              <CardHeader className="p-8 pb-4">
+            <Card key={goal.id} className="group flex h-full min-h-[320px] flex-col overflow-hidden rounded-[32px] border-none bg-white shadow-[0_8px_30px_rgb(0,0,0,0.02)] transition-all duration-500 hover:shadow-[0_20px_50px_rgba(0,0,0,0.06)]">
+              <CardHeader className="p-6 pb-4 sm:p-8 sm:pb-4">
                 <div className="flex items-start justify-between gap-4">
                   <div className="space-y-1.5">
                     <CardTitle className="text-xl font-black text-slate-900 leading-tight group-hover:text-blue-600 transition-colors">
@@ -67,7 +67,7 @@ export default async function CheckInsPage() {
                   </div>
                 </div>
               </CardHeader>
-              <CardContent className="p-8 pt-4 flex-1 flex flex-col justify-between space-y-8">
+              <CardContent className="flex min-h-0 flex-1 flex-col p-6 pt-4 sm:p-8 sm:pt-4">
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-black text-slate-400 uppercase tracking-widest">Progress Vector</span>
@@ -84,11 +84,11 @@ export default async function CheckInsPage() {
                   </div>
                 </div>
 
-                <div className="flex gap-3 pt-4">
+                <div className="mt-auto flex shrink-0 items-center gap-3 border-t border-slate-100 pt-5">
                   {!isLockedGoal ? (
                     <Dialog>
                       <DialogTrigger asChild>
-                        <Button className="flex-1 rounded-xl bg-slate-900 hover:bg-slate-800 text-white h-12 font-bold shadow-lg transition-all hover:scale-105 active:scale-95">
+                        <Button className="h-12 flex-1 rounded-xl bg-slate-900 font-bold text-white shadow-lg transition-all hover:scale-105 hover:bg-slate-800 active:scale-95">
                           <PlusCircle className="mr-2 h-4 w-4" />
                           Execute Update
                         </Button>
@@ -117,9 +117,9 @@ export default async function CheckInsPage() {
                       </DialogContent>
                     </Dialog>
                   ) : (
-                    <Button
-                      disabled
-                      className={cn(
+                      <Button
+                        disabled
+                        className={cn(
                         "h-12 flex-1 justify-center rounded-xl border font-bold shadow-none opacity-100",
                         "border-slate-300 bg-slate-200 text-slate-800 disabled:bg-slate-200 disabled:text-slate-800"
                       )}
@@ -131,7 +131,7 @@ export default async function CheckInsPage() {
 
                   <Dialog>
                     <DialogTrigger asChild>
-                      <Button variant="outline" className="shrink-0 rounded-xl border-slate-200 h-12 px-4 text-slate-600 hover:bg-slate-50 transition-all hover:scale-105 active:scale-95">
+                      <Button variant="outline" className="h-12 shrink-0 rounded-xl border-slate-200 px-4 text-slate-600 transition-all hover:scale-105 hover:bg-slate-50 active:scale-95">
                         <History className="h-5 w-5 text-slate-500" />
                       </Button>
                     </DialogTrigger>
