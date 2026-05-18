@@ -8,6 +8,41 @@ import { exportGoalsCSV, exportCheckInsCSV } from "@/actions/export";
 import { AnalyticsCharts } from "@/components/reports/AnalyticsCharts";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { Goal, GoalStatus, ProgressHistory, QuarterlyCheckIn, User } from "@prisma/client";
+
+type ReportGoal = Goal & {
+  user: User;
+  checkIns: QuarterlyCheckIn[];
+};
+
+type ActiveCheckInPeriod = {
+  quarter: number;
+  year: number;
+  label: string;
+};
+
+function getActiveCheckInPeriod(date = new Date()): ActiveCheckInPeriod | null {
+  const month = date.getMonth() + 1;
+  const year = date.getFullYear();
+
+  if (month >= 7 && month <= 9) {
+    return { quarter: 1, year, label: `Q1 ${year}` };
+  }
+
+  if (month >= 10 && month <= 12) {
+    return { quarter: 2, year, label: `Q2 ${year}` };
+  }
+
+  if (month >= 1 && month <= 2) {
+    return { quarter: 3, year, label: `Q3 ${year}` };
+  }
+
+  if (month === 3 || month === 4) {
+    return { quarter: 4, year, label: `Q4 ${year}` };
+  }
+
+  return null;
+}
 
 export default async function ReportsPage({
   searchParams,
@@ -19,19 +54,20 @@ export default async function ReportsPage({
   const user = session?.user as { id?: string; role?: string; name?: string | null };
   const role = user?.role || "EMPLOYEE";
   const userId = user?.id;
+  const activeCheckInPeriod = getActiveCheckInPeriod();
 
   if (!userId) return null;
 
   // Aggregate data for reports
-  let goals: any[] = [];
+  let goals: ReportGoal[] = [];
   let allUsersCount = 0;
   let sharedGoalParticipationCount = 0;
-  let overdueCheckIns: any[] = [];
+  let overdueCheckIns: ReportGoal[] = [];
   let atRiskGoalsCount = 0;
 
-  const baseGoalQuery: any = {};
+  const baseGoalQuery: { status?: GoalStatus } = {};
   if (statusFilter && statusFilter !== "ALL") {
-    baseGoalQuery.status = statusFilter;
+    baseGoalQuery.status = statusFilter as GoalStatus;
   }
 
   if (role === "ADMIN") {
@@ -51,11 +87,11 @@ export default async function ReportsPage({
     ).length;
 
     // Overdue Check-ins (Approved goals without Q2 2026 check-in)
-    const currentQuarter = 2;
-    const currentYear = 2026;
+    const currentQuarter = activeCheckInPeriod?.quarter ?? 2;
+    const currentYear = activeCheckInPeriod?.year ?? 2026;
     overdueCheckIns = goals.filter(g => 
       (g.status === "APPROVED" || g.status === "LOCKED") && 
-      !g.checkIns.some((ci: any) => ci.quarter === currentQuarter && ci.year === currentYear)
+      !g.checkIns.some((ci) => ci.quarter === currentQuarter && ci.year === currentYear)
     );
   } else if (role === "MANAGER") {
     goals = await prisma.goal.findMany({
@@ -113,7 +149,7 @@ export default async function ReportsPage({
   const sixMonthsAgo = new Date();
   sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
 
-  const history = await prisma.progressHistory.findMany({
+  const history: ProgressHistory[] = await prisma.progressHistory.findMany({
     where: role === "MANAGER" ? {
         goal: { user: { managerId: userId } },
         createdAt: { gte: sixMonthsAgo }
@@ -158,6 +194,129 @@ export default async function ReportsPage({
   const timestamp = new Date().toISOString().split('T')[0];
   const goalsFilename = `goals_report_${timestamp}.csv`;
   const checkinsFilename = `checkins_report_${timestamp}.csv`;
+
+  let employeeCompletion: {
+    id: string;
+    name: string | null;
+    managerName: string | null;
+    totalGoals: number;
+    completedGoals: number;
+    isComplete: boolean;
+  }[] = [];
+
+  let managerCompletion: {
+    id: string;
+    name: string | null;
+    teamMembers: number;
+    reviewedCheckIns: number;
+    totalCheckIns: number;
+    isComplete: boolean;
+  }[] = [];
+
+  if (role !== "EMPLOYEE" && activeCheckInPeriod) {
+    const employeesForCompletion = await prisma.user.findMany({
+      where: role === "ADMIN"
+        ? { role: "EMPLOYEE" }
+        : { role: "EMPLOYEE", managerId: userId },
+      include: {
+        manager: true,
+        goals: {
+          where: { status: { in: ["APPROVED", "LOCKED"] } },
+          include: {
+            checkIns: {
+              where: {
+                quarter: activeCheckInPeriod.quarter,
+                year: activeCheckInPeriod.year,
+              },
+              include: {
+                managerFeedback: true,
+              },
+            },
+          },
+        },
+      },
+      orderBy: { name: "asc" },
+    });
+
+    employeeCompletion = employeesForCompletion.map((employee) => {
+      const totalGoals = employee.goals.length;
+      const completedGoals = employee.goals.filter((goal) => goal.checkIns.length > 0).length;
+      return {
+        id: employee.id,
+        name: employee.name,
+        managerName: employee.manager?.name ?? null,
+        totalGoals,
+        completedGoals,
+        isComplete: totalGoals > 0 && completedGoals === totalGoals,
+      };
+    });
+
+    const managersForCompletion = role === "ADMIN"
+      ? await prisma.user.findMany({
+          where: { role: "MANAGER" },
+          include: {
+            employees: {
+              where: { role: "EMPLOYEE" },
+              include: {
+                goals: {
+                  where: { status: { in: ["APPROVED", "LOCKED"] } },
+                  include: {
+                    checkIns: {
+                      where: {
+                        quarter: activeCheckInPeriod.quarter,
+                        year: activeCheckInPeriod.year,
+                      },
+                      include: {
+                        managerFeedback: true,
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          orderBy: { name: "asc" },
+        })
+      : await prisma.user.findMany({
+          where: { id: userId },
+          include: {
+            employees: {
+              where: { role: "EMPLOYEE" },
+              include: {
+                goals: {
+                  where: { status: { in: ["APPROVED", "LOCKED"] } },
+                  include: {
+                    checkIns: {
+                      where: {
+                        quarter: activeCheckInPeriod.quarter,
+                        year: activeCheckInPeriod.year,
+                      },
+                      include: {
+                        managerFeedback: true,
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        });
+
+    managerCompletion = managersForCompletion.map((manager) => {
+      const teamCheckIns = manager.employees.flatMap((employee) =>
+        employee.goals.flatMap((goal) => goal.checkIns)
+      );
+      const reviewedCheckIns = teamCheckIns.filter((checkIn) => checkIn.managerFeedback).length;
+      return {
+        id: manager.id,
+        name: manager.name,
+        teamMembers: manager.employees.length,
+        reviewedCheckIns,
+        totalCheckIns: teamCheckIns.length,
+        isComplete: teamCheckIns.length > 0 && reviewedCheckIns === teamCheckIns.length,
+      };
+    });
+  }
 
   return (
     <div className="max-w-7xl mx-auto space-y-10 py-6 px-4">
@@ -229,7 +388,9 @@ export default async function ReportsPage({
             <CardHeader className="p-8 border-b border-slate-50 flex items-center justify-between flex-row">
               <div>
                 <CardTitle className="text-lg font-bold text-slate-900">Compliance Oversight</CardTitle>
-                <p className="text-sm text-slate-400 font-medium italic">Missing Q2 2026 performance updates</p>
+                <p className="text-sm text-slate-400 font-medium italic">
+                  Missing {activeCheckInPeriod ? `${activeCheckInPeriod.label} ` : ""}performance updates
+                </p>
               </div>
               <Badge variant="outline" className="text-rose-600 border-rose-100 bg-rose-50 font-bold px-3 py-1">{overdueCheckIns.length} Missing</Badge>
             </CardHeader>
@@ -255,7 +416,9 @@ export default async function ReportsPage({
                           <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{g.title}</p>
                         </div>
                       </div>
-                      <Badge variant="secondary" className="bg-slate-100 text-slate-600 rounded-lg text-[9px] font-black uppercase tracking-widest px-2">Q2 Overdue</Badge>
+                      <Badge variant="secondary" className="bg-slate-100 text-slate-600 rounded-lg text-[9px] font-black uppercase tracking-widest px-2">
+                        {activeCheckInPeriod ? `Q${activeCheckInPeriod.quarter} Overdue` : "Overdue"}
+                      </Badge>
                     </div>
                   ))}
                 </div>
@@ -281,6 +444,108 @@ export default async function ReportsPage({
                     </div>
                   </div>
                 ))}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {role !== "EMPLOYEE" && activeCheckInPeriod && (
+        <div className="grid gap-6 lg:grid-cols-2">
+          <Card className="border-none shadow-[0_8px_30px_rgb(0,0,0,0.02)] rounded-[32px] overflow-hidden bg-white">
+            <CardHeader className="p-8 border-b border-slate-50">
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <CardTitle className="text-lg font-bold text-slate-900">Employee Completion Dashboard</CardTitle>
+                  <p className="text-sm text-slate-400 font-medium italic">
+                    {activeCheckInPeriod.label} employee check-in completion status
+                  </p>
+                </div>
+                <Badge variant="outline" className="rounded-full border-slate-200 bg-slate-50 px-3 py-1 font-bold">
+                  {employeeCompletion.filter((entry) => entry.isComplete).length}/{employeeCompletion.length} Complete
+                </Badge>
+              </div>
+            </CardHeader>
+            <CardContent className="p-0">
+              <div className="max-h-[360px] overflow-y-auto">
+                {employeeCompletion.length === 0 ? (
+                  <div className="p-12 text-center text-sm font-medium text-slate-400">
+                    No employees with active approved goals in the current check-in cycle.
+                  </div>
+                ) : (
+                  <div className="divide-y divide-slate-50">
+                    {employeeCompletion.map((entry) => (
+                      <div key={entry.id} className="flex items-center justify-between gap-4 p-6 hover:bg-slate-50/50 transition-colors">
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-black text-slate-900">{entry.name}</p>
+                          <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                            {entry.managerName ? `Manager: ${entry.managerName}` : "Manager unassigned"}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <span className="text-xs font-bold text-slate-500">
+                            {entry.completedGoals}/{entry.totalGoals} Goals
+                          </span>
+                          <Badge
+                            variant={entry.isComplete ? "success" : "warning"}
+                            className="rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-widest"
+                          >
+                            {entry.isComplete ? "Completed" : "Pending"}
+                          </Badge>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-none shadow-[0_8px_30px_rgb(0,0,0,0.02)] rounded-[32px] overflow-hidden bg-white">
+            <CardHeader className="p-8 border-b border-slate-50">
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <CardTitle className="text-lg font-bold text-slate-900">Manager Review Completion</CardTitle>
+                  <p className="text-sm text-slate-400 font-medium italic">
+                    {activeCheckInPeriod.label} manager check-in feedback coverage
+                  </p>
+                </div>
+                <Badge variant="outline" className="rounded-full border-slate-200 bg-slate-50 px-3 py-1 font-bold">
+                  {managerCompletion.filter((entry) => entry.isComplete).length}/{managerCompletion.length} Complete
+                </Badge>
+              </div>
+            </CardHeader>
+            <CardContent className="p-0">
+              <div className="max-h-[360px] overflow-y-auto">
+                {managerCompletion.length === 0 ? (
+                  <div className="p-12 text-center text-sm font-medium text-slate-400">
+                    No manager review activity is required for the active check-in period yet.
+                  </div>
+                ) : (
+                  <div className="divide-y divide-slate-50">
+                    {managerCompletion.map((entry) => (
+                      <div key={entry.id} className="flex items-center justify-between gap-4 p-6 hover:bg-slate-50/50 transition-colors">
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-black text-slate-900">{entry.name}</p>
+                          <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                            {entry.teamMembers} Direct Reports
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <span className="text-xs font-bold text-slate-500">
+                            {entry.reviewedCheckIns}/{entry.totalCheckIns} Reviews
+                          </span>
+                          <Badge
+                            variant={entry.isComplete ? "success" : "warning"}
+                            className="rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-widest"
+                          >
+                            {entry.isComplete ? "Completed" : "Pending"}
+                          </Badge>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -318,7 +583,7 @@ export default async function ReportsPage({
                   {goals.map((goal, i) => {
                     const progress = goal.checkIns[0]?.progress || 0;
                     return (
-                      <tr key={i} className="hover:bg-slate-50/50 transition-colors">
+                      <tr key={goal.id} className="hover:bg-slate-50/50 transition-colors">
                         <td className="px-8 py-6">
                           <div className="flex items-center gap-4">
                             <div className="h-10 w-10 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400 font-black text-xs shrink-0 border border-slate-100">

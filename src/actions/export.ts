@@ -39,7 +39,7 @@ export async function exportGoalsCSV() {
 
   // Define CSV headers
   const headers = [
-    "Goal ID", "Owner", "Title", "Thrust Area", "UOM", "Target", "Weightage", "Status", "Latest Progress %"
+    "Goal ID", "Owner", "Title", "Thrust Area", "UOM", "Planned Target", "Weightage", "Status", "Actual Achievement", "Latest Progress %"
   ];
 
   const rows = goals.map(g => {
@@ -56,6 +56,7 @@ export async function exportGoalsCSV() {
       escapeCSV(g.target),
       escapeCSV(`${g.weightage}%`),
       escapeCSV(g.status),
+      escapeCSV(""),
       escapeCSV(latestCheckIn ? `${latestCheckIn.progress}%` : "0%")
     ].join(",");
   });
@@ -94,7 +95,7 @@ export async function exportCheckInsCSV() {
     }
   
     const headers = [
-      "CheckIn ID", "Goal", "Employee", "Quarter", "Year", "Progress %", "Status", "Accomplishments", "Challenges", "Next Steps"
+      "CheckIn ID", "Goal", "Employee", "Quarter", "Year", "Planned Target", "Actual Achievement", "Progress %", "Status", "Accomplishments", "Challenges", "Next Steps"
     ];
   
     const rows = checkIns.map(c => [
@@ -103,6 +104,8 @@ export async function exportCheckInsCSV() {
         escapeCSV(c.goal.user.name || c.goal.user.email),
         escapeCSV(`Q${c.quarter}`),
         escapeCSV(c.year),
+        escapeCSV(c.goal.target),
+        escapeCSV(""),
         escapeCSV(`${c.progress}%`),
         escapeCSV(c.status),
         escapeCSV(c.accomplishments),

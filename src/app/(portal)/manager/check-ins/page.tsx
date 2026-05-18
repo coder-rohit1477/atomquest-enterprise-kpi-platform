@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/goals/StatusBadge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { ManagerFeedbackForm } from "@/components/goals/ManagerFeedbackForm";
-import { CheckInHistory } from "@/components/goals/CheckInHistory";
+import { CheckInHistory, type CheckInHistoryItem } from "@/components/goals/CheckInHistory";
 import { Eye, AlertCircle, History as HistoryIcon } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
@@ -26,8 +26,8 @@ export default async function ManagerCheckInsPage() {
 
       <Card className="border-none shadow-[0_8px_30px_rgb(0,0,0,0.02)] rounded-[32px] overflow-hidden bg-white">
         <CardHeader className="p-8 border-b border-slate-50">
-          <CardTitle className="text-xl font-bold text-slate-900">Employee Check-Ins</CardTitle>
-          <CardDescription className="font-medium italic">Recent quarterly updates from your team members.</CardDescription>
+          <CardTitle className="text-xl font-bold text-slate-900">Team Check-Ins</CardTitle>
+          <CardDescription className="font-medium italic">Review quarterly updates from your team members and monitor progress across active objectives.</CardDescription>
         </CardHeader>
         <CardContent className="p-0">
           <Table>
@@ -182,7 +182,7 @@ export default async function ManagerCheckInsPage() {
                                                 </div>
                                                 Performance Trajectory
                                             </h4>
-                                            <CheckInHistory checkIns={goal.checkIns as any} />
+                                            <CheckInHistory checkIns={goal.checkIns as CheckInHistoryItem[]} />
                                         </div>
                                     </div>
                                 </DialogContent>

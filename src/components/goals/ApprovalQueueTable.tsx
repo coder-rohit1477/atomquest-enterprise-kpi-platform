@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   Table,
   TableBody,
@@ -14,8 +14,8 @@ import { Goal, ApprovalHistory, User } from "@prisma/client";
 import { StatusBadge } from "./StatusBadge";
 import { GoalReviewModal } from "./GoalReviewModal";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Eye, ChevronRight, User as UserIcon, ShieldAlert } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { Eye, ShieldAlert } from "lucide-react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 type GoalWithHistory = Goal & { history: ApprovalHistory[] };
 type EmployeeWithGoals = User & { goals: GoalWithHistory[] };
@@ -25,8 +25,28 @@ interface ApprovalQueueTableProps {
 }
 
 export function ApprovalQueueTable({ employees }: ApprovalQueueTableProps) {
-  const [selectedGoal, setSelectedGoal] = useState<GoalWithHistory | null>(null);
+  const [selectedGoalId, setSelectedGoalId] = useState<string | null>(null);
+  const pathname = usePathname();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const userIdParam = searchParams.get("userId");
+
+  const selectedGoal = useMemo(() => {
+    if (selectedGoalId) {
+      return employees.flatMap((employee) => employee.goals).find((goal) => goal.id === selectedGoalId) ?? null;
+    }
+
+    if (!userIdParam) {
+      return null;
+    }
+
+    const employee = employees.find((entry) => entry.id === userIdParam);
+    if (!employee || employee.goals.length === 0) {
+      return null;
+    }
+
+    return employee.goals.find((goal) => goal.status === "PENDING_APPROVAL") ?? employee.goals[0];
+  }, [employees, selectedGoalId, userIdParam]);
 
   if (employees.length === 0) {
     return (
@@ -82,7 +102,7 @@ export function ApprovalQueueTable({ employees }: ApprovalQueueTableProps) {
                     <TableHead className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Thrust Area</TableHead>
                     <TableHead className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Weight</TableHead>
                     <TableHead className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Status</TableHead>
-                    <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Review</th>
+                    <TableHead className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Review</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -100,12 +120,13 @@ export function ApprovalQueueTable({ employees }: ApprovalQueueTableProps) {
                       </TableCell>
                       <TableCell className="px-8 py-6 text-right">
                         <Button
-                          variant="ghost"
+                          variant="outline"
                           size="sm"
-                          onClick={() => setSelectedGoal(goal)}
-                          className="h-10 w-10 rounded-xl bg-slate-50 hover:bg-blue-600 hover:text-white transition-all p-0 group-hover:scale-110"
+                          onClick={() => setSelectedGoalId(goal.id)}
+                          className="h-10 rounded-xl border-slate-200 px-3 font-bold text-slate-700 transition-all group-hover:scale-105 hover:bg-blue-600 hover:text-white"
                         >
-                          <ChevronRight className="h-5 w-5" />
+                          <Eye className="mr-2 h-4 w-4" />
+                          View
                         </Button>
                       </TableCell>
                     </TableRow>
@@ -119,9 +140,15 @@ export function ApprovalQueueTable({ employees }: ApprovalQueueTableProps) {
 
       {selectedGoal && (
         <GoalReviewModal
+          key={selectedGoal.id}
           goal={selectedGoal}
           isOpen={!!selectedGoal}
-          onClose={() => setSelectedGoal(null)}
+          onClose={() => {
+            setSelectedGoalId(null);
+            if (userIdParam) {
+              router.replace(pathname, { scroll: false });
+            }
+          }}
           onActionComplete={() => {
             router.refresh();
           }}

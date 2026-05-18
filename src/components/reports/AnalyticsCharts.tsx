@@ -1,8 +1,8 @@
 "use client";
 
-import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, LineChart, Line } from "recharts";
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, LineChart, Line, XAxis, YAxis, CartesianGrid } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { BarChart3, PieChart as PieChartIcon, TrendingUp } from "lucide-react";
+import { PieChart as PieChartIcon, TrendingUp } from "lucide-react";
 
 interface AnalyticsChartsProps {
   statusData: { name: string; value: number; color: string }[];

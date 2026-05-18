@@ -4,7 +4,7 @@ import { ApprovalQueueTable } from "@/components/goals/ApprovalQueueTable";
 import { CreateSharedGoalModal } from "@/components/goals/CreateSharedGoalModal";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { CheckCircle2, Clock, Users, ShieldCheck, Briefcase, Share2, Target } from "lucide-react";
-import { GoalStatus, Goal, ApprovalHistory, User, SharedGoalAssignment, QuarterlyCheckIn } from "@prisma/client";
+import { Goal, ApprovalHistory, User, SharedGoalAssignment, QuarterlyCheckIn } from "@prisma/client";
 import { Badge } from "@/components/ui/badge";
 
 type GoalWithHistory = Goal & { history: ApprovalHistory[] };

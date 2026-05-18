@@ -1,7 +1,6 @@
 "use client";
 
 import { NotificationCenter } from "./NotificationCenter";
-import { User } from "next-auth";
 
 interface DesktopHeaderProps {
   user?: {

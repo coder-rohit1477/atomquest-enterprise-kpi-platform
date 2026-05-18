@@ -7,10 +7,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Loader2, Lock, Mail, Shield, ArrowRight, Building2, CheckCircle2 } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 
 export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
+
+  const handleSupportAction = (message: string) => {
+    toast.info(message);
+  };
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -141,7 +145,13 @@ export default function LoginPage() {
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <Label htmlFor="password" dangerouslySetInnerHTML={{ __html: 'Password' }} className="text-slate-700 font-medium" />
-                  <a href="#" className="text-sm font-semibold text-blue-600 hover:text-blue-700">Forgot?</a>
+                  <button
+                    type="button"
+                    onClick={() => handleSupportAction("Use one of the demo accounts below or contact your portal administrator for password support.")}
+                    className="text-sm font-semibold text-blue-600 hover:text-blue-700"
+                  >
+                    Forgot?
+                  </button>
                 </div>
                 <div className="relative group">
                   <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-blue-600 transition-colors" />
@@ -209,7 +219,14 @@ export default function LoginPage() {
           
           <p className="mt-8 text-center text-sm text-slate-500">
             Secure login with industry-standard encryption. <br />
-            Need help? <a href="#" className="font-semibold text-blue-600 underline underline-offset-4">Contact IT Support</a>
+            Need help?{" "}
+            <button
+              type="button"
+              onClick={() => handleSupportAction("For the demo environment, contact your administrator or use the seeded credentials shown above.")}
+              className="font-semibold text-blue-600 underline underline-offset-4"
+            >
+              Contact IT Support
+            </button>
           </p>
         </motion.div>
       </div>

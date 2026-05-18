@@ -27,7 +27,7 @@ export default async function LogsPage() {
               <CardDescription>Live stream of system activities and user operations.</CardDescription>
             </div>
             <Badge variant="outline" className="bg-slate-50 text-slate-600 border-slate-200 px-4 py-1 rounded-full">
-              Last 100 Events
+              Last {logs.length} Events
             </Badge>
           </div>
         </CardHeader>

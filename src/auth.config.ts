@@ -31,11 +31,11 @@ export const authConfig = {
       return token;
     },
     async session({ session, token }) {
-      if (token.role && session.user) {
-        (session.user as any).role = token.role as string;
+      if (typeof token.role === "string" && session.user) {
+        session.user.role = token.role;
       }
-      if (token.id && session.user) {
-        (session.user as any).id = token.id as string;
+      if (typeof token.id === "string" && session.user) {
+        session.user.id = token.id;
       }
       return session;
     },

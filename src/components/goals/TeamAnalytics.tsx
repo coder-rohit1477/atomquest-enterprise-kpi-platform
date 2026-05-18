@@ -1,6 +1,6 @@
 "use client";
 
-import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from "recharts";
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "recharts";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface TeamAnalyticsProps {
@@ -9,6 +9,7 @@ interface TeamAnalyticsProps {
     avgProgress: number;
     totalGoals: number;
     delayedGoals: number;
+    pendingReviews: number;
   };
 }
 
@@ -65,7 +66,7 @@ export function TeamAnalytics({ data }: TeamAnalyticsProps) {
                 ))}
               </Pie>
               <Tooltip 
-                formatter={(value: any) => [`${value} Goals`, 'Count']}
+                formatter={(value) => [`${Number(value ?? 0)} Goals`, "Count"]}
                 contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
               />
               <Legend verticalAlign="bottom" height={36}/>
@@ -83,7 +84,7 @@ export function TeamAnalytics({ data }: TeamAnalyticsProps) {
           <div className="space-y-4 text-sm">
             <div className="flex items-center justify-between">
               <span className="text-muted-foreground">Pending Reviews</span>
-              <span className="font-bold">3</span>
+              <span className="font-bold">{data.pendingReviews}</span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-muted-foreground">Risk Flags Set</span>

@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { Plus, Users, Loader2, Share2, Target, Scale, Info } from "lucide-react";
+import { Plus, Users, Loader2, Share2, Info } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -60,6 +61,7 @@ interface CreateSharedGoalModalProps {
 }
 
 export function CreateSharedGoalModal({ team }: CreateSharedGoalModalProps) {
+  const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedEmployees, setSelectedEmployees] = useState<string[]>([]);
@@ -90,11 +92,11 @@ export function CreateSharedGoalModal({ team }: CreateSharedGoalModalProps) {
         setIsOpen(false);
         form.reset();
         setSelectedEmployees([]);
-        window.location.reload(); // Refresh to show new goal
+        router.refresh();
       } else {
         toast.error("Failed to create shared goal");
       }
-    } catch (error) {
+    } catch {
       toast.error("An unexpected error occurred");
     } finally {
       setIsSubmitting(false);
@@ -108,7 +110,16 @@ export function CreateSharedGoalModal({ team }: CreateSharedGoalModalProps) {
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+    <Dialog
+      open={isOpen}
+      onOpenChange={(open) => {
+        setIsOpen(open);
+        if (!open) {
+          form.reset();
+          setSelectedEmployees([]);
+        }
+      }}
+    >
       <DialogTrigger asChild>
         <Button className="rounded-xl bg-indigo-600 hover:bg-indigo-700 h-12 px-6 shadow-xl shadow-indigo-500/20 font-bold transition-all hover:scale-[1.02] active:scale-[0.98]">
           <Plus className="h-5 w-5 mr-2" />
@@ -167,7 +178,7 @@ export function CreateSharedGoalModal({ team }: CreateSharedGoalModalProps) {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel className="font-bold text-slate-700 uppercase tracking-widest text-[10px]">Strategic Area</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <Select onValueChange={field.onChange} value={field.value}>
                           <FormControl>
                             <SelectTrigger className="h-14 rounded-2xl border-slate-200 font-bold">
                               <SelectValue placeholder="Select area" />
@@ -190,7 +201,7 @@ export function CreateSharedGoalModal({ team }: CreateSharedGoalModalProps) {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel className="font-bold text-slate-700 uppercase tracking-widest text-[10px]">Measurement</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <Select onValueChange={field.onChange} value={field.value}>
                           <FormControl>
                             <SelectTrigger className="h-14 rounded-2xl border-slate-200 font-bold">
                               <SelectValue placeholder="Select UoM" />
@@ -273,7 +284,16 @@ export function CreateSharedGoalModal({ team }: CreateSharedGoalModalProps) {
                         </div>
                         <Checkbox 
                           checked={selectedEmployees.includes(emp.id)}
-                          onCheckedChange={() => toggleEmployee(emp.id)}
+                          onCheckedChange={(checked) => {
+                            setSelectedEmployees((prev) =>
+                              checked
+                                ? prev.includes(emp.id)
+                                  ? prev
+                                  : [...prev, emp.id]
+                                : prev.filter((empId) => empId !== emp.id)
+                            );
+                          }}
+                          onClick={(e) => e.stopPropagation()}
                           className="rounded-md border-slate-300 data-[state=checked]:bg-indigo-600 data-[state=checked]:border-indigo-600"
                         />
                       </div>

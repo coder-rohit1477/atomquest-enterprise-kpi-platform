@@ -22,7 +22,7 @@ export function StatusBadge({ status }: { status: GoalStatus | CheckInStatus }) 
   if (!config) return null;
 
   return (
-    <Badge variant={config.variant}>
+    <Badge variant={config.variant} className="px-3 py-1 rounded-lg font-black uppercase text-[10px] tracking-widest border-none shadow-sm">
       {config.label}
     </Badge>
   );

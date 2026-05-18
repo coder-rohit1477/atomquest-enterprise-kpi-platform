@@ -13,11 +13,19 @@ const CheckInSchema = z.object({
   quarter: z.number().min(1).max(4),
   year: z.number(),
   progress: z.number().min(0).max(100),
+  actualAchievement: z.number().optional(),
   accomplishments: z.string().min(10, "Please provide more details about your accomplishments"),
   challenges: z.string().optional(),
   nextSteps: z.string().optional(),
   status: z.nativeEnum(CheckInStatus),
 });
+
+const CHECK_IN_WINDOWS: Record<number, { months: readonly number[]; label: string }> = {
+  1: { months: [7, 8, 9], label: "July to September" },
+  2: { months: [10, 11, 12], label: "October to December" },
+  3: { months: [1, 2, 3], label: "January to March" },
+  4: { months: [3, 4], label: "March to April" },
+};
 
 export async function submitCheckIn(data: z.infer<typeof CheckInSchema>) {
   const session = await auth();
@@ -36,6 +44,15 @@ export async function submitCheckIn(data: z.infer<typeof CheckInSchema>) {
 
   if (goal.status !== "APPROVED" && goal.status !== "LOCKED") {
     return { error: "Check-ins are only allowed for approved or locked goals." };
+  }
+
+  const now = new Date();
+  const month = now.getMonth() + 1; // 1-indexed
+  const activeWindow = CHECK_IN_WINDOWS[validated.quarter];
+  if (!activeWindow.months.includes(month)) {
+    return {
+      error: `Q${validated.quarter} check-ins can only be submitted during ${activeWindow.label}.`,
+    };
   }
 
   const result = await prisma.$transaction(async (tx) => {
@@ -70,6 +87,40 @@ export async function submitCheckIn(data: z.infer<typeof CheckInSchema>) {
       }
     });
 
+    // --- BRD Requirement: Sync Shared Goal Achievement (Section 2.1) ---
+    // "Achievement updates by the primary owner sync across all linked goal sheets"
+    if (goal.isShared && !goal.sharedGoalId) {
+       // This is the primary owner (Master Template)
+       const linkedGoals = await tx.goal.findMany({
+         where: { sharedGoalId: goal.id }
+       });
+
+       for (const linked of linkedGoals) {
+         await tx.quarterlyCheckIn.upsert({
+           where: {
+             goalId_quarter_year: {
+               goalId: linked.id,
+               quarter: validated.quarter,
+               year: validated.year,
+             }
+           },
+           update: {
+             progress: validated.progress,
+             status: validated.status,
+             accomplishments: `Synced from Shared Goal Owner: ${validated.accomplishments}`,
+           },
+           create: {
+             goalId: linked.id,
+             quarter: validated.quarter,
+             year: validated.year,
+             progress: validated.progress,
+             status: validated.status,
+             accomplishments: `Synced from Shared Goal Owner: ${validated.accomplishments}`,
+           }
+         });
+       }
+    }
+
     // Audit Log
     await createAuditLog(
       "Check-In Submitted",
@@ -87,20 +138,6 @@ export async function submitCheckIn(data: z.infer<typeof CheckInSchema>) {
         "INFO",
         `/manager/check-ins`
       );
-    }
-
-    // If progress is 100%, maybe notify something else? 
-    // Prompt says: "goal marked completed" triggers notification.
-    if (validated.status === "COMPLETED" || validated.progress === 100) {
-        if (goal.user.managerId) {
-            await createNotification(
-                goal.user.managerId,
-                "Goal Completed!",
-                `${goal.user.name} has marked the goal "${goal.title}" as completed.`,
-                "SUCCESS",
-                `/manager/check-ins`
-            );
-        }
     }
 
     return checkIn;
@@ -278,6 +315,7 @@ export async function getTeamAnalytics() {
         statusDistribution: Object.entries(statusCounts).map(([name, value]) => ({ name, value })),
         avgProgress,
         totalGoals: goalCount,
-        delayedGoals: statusCounts["DELAYED"] + statusCounts["AT_RISK"]
+        delayedGoals: statusCounts["DELAYED"] + statusCounts["AT_RISK"],
+        pendingReviews: statusCounts["NO_CHECK_IN"]
     };
 }

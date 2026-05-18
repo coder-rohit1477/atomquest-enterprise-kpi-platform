@@ -15,7 +15,7 @@ const GoalSchema = z.object({
   thrustArea: z.string().min(1, "Thrust area is required"),
   uom: z.string().min(1, "Unit of measurement is required"),
   target: z.coerce.number().min(1),
-  weightage: z.coerce.number().min(1).max(100),
+  weightage: z.coerce.number().min(10, "Minimum weightage is 10%").max(100),
 });
 
 export async function getGoals() {
@@ -42,11 +42,15 @@ export async function upsertGoal(data: z.infer<typeof GoalSchema>) {
   // If editing an existing goal, check if it's locked or shared-protected
   if (validated.id) {
     const existing = await prisma.goal.findUnique({ where: { id: validated.id } });
-    if (existing && (existing.status === "APPROVED" || existing.status === "LOCKED")) {
-      return { error: "Cannot edit an approved or locked goal." };
+    if (!existing || existing.userId !== session.user.id) {
+      return { error: "Goal not found or unauthorized." };
     }
-    // Block core field edits if it's a child of a shared goal
-    if (existing?.sharedGoalId) {
+
+    const isSharedChildGoal = Boolean(existing.sharedGoalId);
+    if (existing.status === "LOCKED" && !isSharedChildGoal) {
+      return { error: "Cannot edit a locked goal." };
+    }
+    if (isSharedChildGoal) {
       const isMetadataChanged = existing.title !== validated.title || 
                                  existing.description !== validated.description ||
                                  existing.thrustArea !== validated.thrustArea ||
@@ -69,18 +73,29 @@ export async function upsertGoal(data: z.infer<typeof GoalSchema>) {
     }
   }
 
-  const goal = await prisma.goal.upsert({
-    where: { id: validated.id || "" },
-    update: {
-      ...validated,
-      status: "DRAFT"
-    },
-    create: {
-      ...validated,
-      userId: session.user.id,
-      status: "DRAFT"
+  let goal;
+  if (validated.id) {
+    const existing = await prisma.goal.findUnique({ where: { id: validated.id } });
+    if (!existing || existing.userId !== session.user.id) {
+      return { error: "Goal not found or unauthorized." };
     }
-  });
+
+    goal = await prisma.goal.update({
+      where: { id: validated.id },
+      data: {
+        ...validated,
+        status: existing.status,
+      },
+    });
+  } else {
+    goal = await prisma.goal.create({
+      data: {
+        ...validated,
+        userId: session.user.id,
+        status: "DRAFT",
+      },
+    });
+  }
 
   // Audit Log
   await createAuditLog(
@@ -92,6 +107,49 @@ export async function upsertGoal(data: z.infer<typeof GoalSchema>) {
 
   revalidatePath("/dashboard/goals");
   return { success: true, data: goal };
+}
+
+export async function saveManagerReviewDraft(
+  goalId: string,
+  data: { comment?: string; target?: number; weightage?: number }
+) {
+  const session = await auth();
+  if (!session?.user?.id || !["MANAGER", "ADMIN"].includes(session.user.role)) {
+    throw new Error("Unauthorized");
+  }
+
+  const goal = await prisma.goal.findUnique({
+    where: { id: goalId },
+    include: { user: true },
+  });
+
+  if (!goal) {
+    throw new Error("Goal not found");
+  }
+
+  if (goal.user.managerId !== session.user.id) {
+    throw new Error("Unauthorized access to employee goal");
+  }
+
+  const updatedGoal = await prisma.goal.update({
+    where: { id: goalId },
+    data: {
+      managerComment: data.comment,
+      ...(goal.status !== "LOCKED" && typeof data.target === "number" ? { target: data.target } : {}),
+      ...(goal.status !== "LOCKED" && typeof data.weightage === "number" ? { weightage: Math.round(data.weightage) } : {}),
+    },
+  });
+
+  await createAuditLog(
+    "Manager Review Draft Saved",
+    "GOAL",
+    goalId,
+    `Draft feedback saved for ${goal.user.name}`
+  );
+
+  revalidatePath("/manager/dashboard");
+  revalidatePath("/dashboard/goals");
+  return { success: true, data: updatedGoal };
 }
 
 // --- Shared Goal Actions ---
@@ -204,7 +262,7 @@ export async function deleteGoal(id: string) {
 
   const goal = await prisma.goal.findUnique({ where: { id } });
   if (!goal || goal.userId !== session.user.id) throw new Error("Not found");
-  if (goal.status !== "DRAFT" && goal.status !== "REJECTED") return { error: "Only draft or rejected goals can be deleted." };
+  if (goal.status === "LOCKED") return { error: "Locked goals cannot be deleted." };
 
   await prisma.goal.delete({ where: { id } });
 
@@ -270,7 +328,7 @@ export async function submitGoals() {
         "New Goals Submitted",
         `${user.name} has submitted goals for your review.`,
         "INFO",
-        "/manager/dashboard"
+        `/manager/dashboard?userId=${session.user.id}`
       );
     }
   });
@@ -322,6 +380,9 @@ export async function handleManagerAction(
 
   if (!goal) throw new Error("Goal not found");
   if (goal.user.managerId !== session.user.id) throw new Error("Unauthorized access to employee goal");
+  if (goal.status === "LOCKED") {
+    return { error: "Locked goals cannot be modified." };
+  }
 
   let toStatus: GoalStatus;
   if (action === "APPROVE") toStatus = "LOCKED"; // Requirement: Approved goals become locked
@@ -334,8 +395,8 @@ export async function handleManagerAction(
       data: { 
         status: toStatus,
         managerComment: comment,
-        ...(updates?.target && { target: updates.target }),
-        ...(updates?.weightage && { weightage: updates.weightage }),
+        ...(typeof updates?.target === "number" ? { target: updates.target } : {}),
+        ...(typeof updates?.weightage === "number" ? { weightage: Math.round(updates.weightage) } : {}),
       }
     });
 
@@ -352,28 +413,32 @@ export async function handleManagerAction(
     // Create notification for employee
     let type = "INFO";
     let title = "Goal Update";
+    let message = `Your strategic objective "${goal.title}" has been updated by management.`;
     if (action === "APPROVE") {
       type = "SUCCESS";
       title = "Goal Approved";
+      message = `Your strategic objective "${goal.title}" has been approved and locked by management.`;
     } else if (action === "REJECT") {
       type = "ERROR";
       title = "Goal Rejected";
+      message = `Your strategic objective "${goal.title}" has been rejected by management.`;
     } else if (action === "REWORK") {
       type = "WARNING";
       title = "Rework Requested";
+      message = `Management requested rework for your strategic objective "${goal.title}".`;
     }
 
     await createNotification(
       goal.userId,
-      "Goal Approval Update",
-      `Your strategic objective "${goal.title}" has been formally ${action.toLowerCase()}ed by management.`,
+      title,
+      message,
       type,
       "/dashboard/goals"
     );
 
     // Audit Log
-    let auditAction = action === "APPROVE" ? "Goal Approved" : 
-                      action === "REJECT" ? "Goal Rejected" : "Goal Update";
+    const auditAction = action === "APPROVE" ? "Goal Approved" : 
+                       action === "REJECT" ? "Goal Rejected" : "Goal Update";
     await createAuditLog(auditAction, "GOAL", goalId, `Action by Manager for ${goal.user.name}`);
   });
 

@@ -7,24 +7,26 @@ import { StatusBadge } from "./StatusBadge";
 import { MessageSquare, Calendar, TrendingUp, AlertCircle, CheckCircle2 } from "lucide-react";
 import { CheckInStatus } from "@prisma/client";
 
-interface CheckInHistoryProps {
-  checkIns: {
+export interface CheckInHistoryItem {
+  id: string;
+  quarter: number;
+  year: number;
+  progress: number;
+  status: CheckInStatus;
+  accomplishments: string;
+  nextSteps: string | null;
+  challenges: string | null;
+  createdAt: Date;
+  managerFeedback: {
     id: string;
-    quarter: number;
-    year: number;
-    progress: number;
-    status: CheckInStatus;
-    accomplishments: string;
-    nextSteps: string | null;
-    challenges: string | null;
+    comment: string;
+    isConcern: boolean;
     createdAt: Date;
-    managerFeedback: {
-      id: string;
-      comment: string;
-      isConcern: boolean;
-      createdAt: Date;
-    } | null;
-  }[];
+  } | null;
+}
+
+interface CheckInHistoryProps {
+  checkIns: CheckInHistoryItem[];
 }
 
 export function CheckInHistory({ checkIns }: CheckInHistoryProps) {

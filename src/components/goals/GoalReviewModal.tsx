@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -14,10 +14,10 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Goal, ApprovalHistory } from "@prisma/client";
 import { StatusBadge } from "./StatusBadge";
-import { handleManagerAction } from "@/actions/goals";
+import { handleManagerAction, saveManagerReviewDraft } from "@/actions/goals";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { CheckCircle2, XCircle, RotateCcw, MessageSquare, History, Target } from "lucide-react";
+import { CheckCircle2, Loader2, XCircle, RotateCcw, MessageSquare, History, Target, Save } from "lucide-react";
 
 interface GoalReviewModalProps {
   goal: Goal & { history: ApprovalHistory[] };
@@ -29,38 +29,89 @@ interface GoalReviewModalProps {
 export function GoalReviewModal({ goal, isOpen, onClose, onActionComplete }: GoalReviewModalProps) {
   const [target, setTarget] = useState(goal.target);
   const [weightage, setWeightage] = useState(goal.weightage);
-  const [comment, setComment] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [comment, setComment] = useState(goal.managerComment ?? "");
+  const [isSubmittingAction, setIsSubmittingAction] = useState(false);
+  const [isSavingFeedback, setIsSavingFeedback] = useState(false);
+  const isLocked = goal.status === "LOCKED";
+  const isPendingApproval = goal.status === "PENDING_APPROVAL";
+  const trimmedComment = comment.trim();
+  const canSaveFeedback = trimmedComment.length > 0 && !isSavingFeedback && !isSubmittingAction;
+
+  useEffect(() => {
+    setTarget(goal.target);
+    setWeightage(goal.weightage);
+    setComment(goal.managerComment ?? "");
+  }, [goal.id, goal.target, goal.weightage, goal.managerComment]);
 
   const onAction = async (action: "APPROVE" | "REJECT" | "REWORK") => {
-    setIsSubmitting(true);
+    if (!isPendingApproval) {
+      return;
+    }
+    setIsSubmittingAction(true);
     try {
       const updates = action === "APPROVE" ? { target, weightage } : undefined;
       const result = await handleManagerAction(goal.id, action, comment, updates);
       if (result.success) {
-        toast.success(`Goal ${action.toLowerCase()}ed successfully`);
+        const labels = {
+          APPROVE: "Goal approved and locked",
+          REJECT: "Goal rejected",
+          REWORK: "Rework requested",
+        } as const;
+        toast.success(labels[action]);
         onActionComplete();
         onClose();
       } else {
-        toast.error("Failed to process action");
+        toast.error(result.error || "Failed to process action");
       }
-    } catch (error) {
+    } catch {
       toast.error("An error occurred");
     } finally {
-      setIsSubmitting(false);
+      setIsSubmittingAction(false);
+    }
+  };
+
+  const onSaveFeedback = async () => {
+    if (!trimmedComment) {
+      toast.error("Enter feedback before saving.");
+      return;
+    }
+
+    setIsSavingFeedback(true);
+    try {
+      const result = await saveManagerReviewDraft(goal.id, {
+        comment: trimmedComment,
+        ...(isLocked ? {} : { target, weightage }),
+      });
+      const draftResult = result as unknown as { error?: unknown; success?: boolean };
+      const errorMessage =
+        typeof draftResult.error === "string"
+          ? draftResult.error
+          : "Failed to save feedback";
+
+      if (draftResult.success) {
+        setComment(trimmedComment);
+        toast.success("Feedback saved successfully");
+        onActionComplete();
+      } else {
+        toast.error(errorMessage);
+      }
+    } catch {
+      toast.error("Failed to save feedback");
+    } finally {
+      setIsSavingFeedback(false);
     }
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto rounded-3xl border-none shadow-2xl p-0 overflow-hidden">
+      <DialogContent className="flex max-h-[92vh] max-w-2xl flex-col overflow-hidden rounded-3xl border-none p-0 shadow-2xl">
         <div className="bg-slate-900 p-8 text-white relative overflow-hidden">
           <div className="absolute top-0 right-0 w-32 h-32 bg-blue-600/20 rounded-full blur-3xl -mr-16 -mt-16" />
           <DialogHeader className="relative z-10">
             <div className="flex items-center justify-between">
               <div>
-                <DialogTitle className="text-2xl font-bold">{goal.title}</DialogTitle>
-                <DialogDescription className="text-slate-400 mt-1">
+                <DialogTitle className="text-2xl font-bold text-white">{goal.title}</DialogTitle>
+                <DialogDescription className="mt-1 font-medium text-slate-300">
                   Enterprise Performance Review • {goal.thrustArea}
                 </DialogDescription>
               </div>
@@ -69,30 +120,31 @@ export function GoalReviewModal({ goal, isOpen, onClose, onActionComplete }: Goa
           </DialogHeader>
         </div>
 
-        <div className="p-8 space-y-8">
-          <div className="grid grid-cols-2 gap-8">
+        <div className="flex-1 overflow-y-auto p-8">
+          <div className="space-y-8 pb-2">
+          <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
             <div className="space-y-2">
-              <Label className="text-[10px] uppercase tracking-widest font-bold text-slate-400">Unit of Measure</Label>
+              <Label className="text-[10px] uppercase tracking-widest font-bold text-slate-500">Unit of Measure</Label>
               <div className="flex items-center gap-2 p-3 bg-slate-50 rounded-xl border border-slate-100">
                 <Target className="h-4 w-4 text-blue-500" />
-                <span className="font-semibold text-slate-700">{goal.uom}</span>
+                <span className="font-semibold text-slate-800">{goal.uom}</span>
               </div>
             </div>
             <div className="space-y-2">
-              <Label className="text-[10px] uppercase tracking-widest font-bold text-slate-400">Current Status</Label>
+              <Label className="text-[10px] uppercase tracking-widest font-bold text-slate-500">Current Status</Label>
               <div className="flex items-center gap-2 p-3 bg-slate-50 rounded-xl border border-slate-100">
-                <History className="h-4 w-4 text-slate-400" />
-                <span className="font-semibold text-slate-700">{goal.status.replace("_", " ")}</span>
+                <History className="h-4 w-4 text-slate-500" />
+                <span className="font-semibold text-slate-800">{goal.status.replace("_", " ")}</span>
               </div>
             </div>
           </div>
 
           <div className="space-y-3">
-            <Label className="text-[10px] uppercase tracking-widest font-bold text-slate-400 flex items-center gap-2">
+            <Label className="text-[10px] uppercase tracking-widest font-bold text-slate-500 flex items-center gap-2">
               <MessageSquare className="h-3 w-3" />
               Goal Description
             </Label>
-            <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 text-sm text-slate-600 leading-relaxed italic">
+            <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4 text-sm leading-relaxed text-slate-700 italic">
               &quot;{goal.description || "No detailed description provided for this strategic goal."}&quot;
             </div>
           </div>
@@ -105,10 +157,10 @@ export function GoalReviewModal({ goal, isOpen, onClose, onActionComplete }: Goa
                 type="number"
                 value={target}
                 onChange={(e) => setTarget(e.target.valueAsNumber || 0)}
-                disabled={goal.status === "LOCKED"}
-                className="h-12 rounded-xl border-slate-200 focus:ring-blue-500 focus:border-blue-500 font-bold"
+                disabled={isLocked}
+                className="h-12 rounded-xl border-slate-200 bg-white font-bold text-slate-900 focus:ring-blue-500 focus:border-blue-500"
               />
-              <p className="text-[10px] text-slate-400 font-medium">Original Submission: <span className="text-slate-900 font-bold">{goal.target}</span></p>
+              <p className="text-[10px] font-medium text-slate-500">Original Submission: <span className="text-slate-900 font-bold">{goal.target}</span></p>
             </div>
             <div className="space-y-3">
               <Label htmlFor="weightage" className="text-sm font-bold text-slate-700">Adjust Weightage (%)</Label>
@@ -117,35 +169,49 @@ export function GoalReviewModal({ goal, isOpen, onClose, onActionComplete }: Goa
                 type="number"
                 value={weightage}
                 onChange={(e) => setWeightage(e.target.valueAsNumber || 0)}
-                disabled={goal.status === "LOCKED"}
-                className="h-12 rounded-xl border-slate-200 focus:ring-blue-500 focus:border-blue-500 font-bold"
+                disabled={isLocked}
+                className="h-12 rounded-xl border-slate-200 bg-white font-bold text-slate-900 focus:ring-blue-500 focus:border-blue-500"
               />
-              <p className="text-[10px] text-slate-400 font-medium">Original Submission: <span className="text-slate-900 font-bold">{goal.weightage}%</span></p>
+              <p className="text-[10px] font-medium text-slate-500">Original Submission: <span className="text-slate-900 font-bold">{goal.weightage}%</span></p>
             </div>
           </div>
 
           <div className="space-y-3">
             <Label htmlFor="comment" className="text-sm font-bold text-slate-700">Managerial Feedback</Label>
+            <p className="text-xs font-medium leading-relaxed text-slate-500">
+              Feedback remains editable even when the goal itself is locked.
+            </p>
             <Textarea
               id="comment"
               placeholder="Provide strategic context for this decision..."
               value={comment}
               onChange={(e) => setComment(e.target.value)}
-              className="min-h-[100px] rounded-2xl border-slate-200 resize-none p-4"
+              className="min-h-[120px] resize-none rounded-2xl border-slate-200 bg-white p-4 font-medium leading-relaxed text-slate-900 placeholder:text-slate-400"
             />
           </div>
 
-          <Card className="border-none bg-slate-50 rounded-2xl overflow-hidden">
+          <div className="flex justify-start">
+            <Button 
+              onClick={onSaveFeedback}
+              className="h-10 rounded-xl bg-blue-600 px-5 text-xs font-bold text-white shadow-lg shadow-blue-500/20 hover:bg-blue-700 disabled:bg-slate-200 disabled:text-slate-500 disabled:shadow-none"
+              disabled={!canSaveFeedback}
+            >
+              {isSavingFeedback ? <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" /> : <Save className="mr-2 h-3.5 w-3.5" />}
+              {isSavingFeedback ? "Saving..." : "Save Feedback"}
+            </Button>
+          </div>
+
+          <Card className="overflow-hidden rounded-2xl border-none bg-slate-50">
             <CardHeader className="py-4 px-6 border-b border-white">
               <CardTitle className="text-xs font-bold uppercase tracking-widest text-slate-500 flex items-center gap-2">
                 <History className="h-3 w-3" />
                 Audit Trail
               </CardTitle>
             </CardHeader>
-            <CardContent className="p-6">
+            <CardContent className="max-h-[280px] overflow-y-auto p-6">
               <div className="space-y-4">
                 {goal.history.length === 0 && (
-                  <p className="text-xs text-slate-400 italic">No historical actions recorded.</p>
+                  <p className="text-xs italic text-slate-500">No historical actions recorded.</p>
                 )}
                 {goal.history.map((h) => (
                   <div key={h.id} className="relative pl-6 pb-2 border-l border-slate-200 last:border-0 last:pb-0">
@@ -154,46 +220,49 @@ export function GoalReviewModal({ goal, isOpen, onClose, onActionComplete }: Goa
                       <span className="text-xs font-bold text-slate-700 uppercase tracking-tighter">
                         {h.fromStatus} → {h.toStatus}
                       </span>
-                      <span className="text-[10px] font-medium text-slate-400">
+                      <span className="text-[10px] font-medium text-slate-500">
                         {new Date(h.createdAt).toLocaleDateString()}
                       </span>
                     </div>
-                    <p className="text-[11px] text-slate-500 font-medium">{h.comment}</p>
+                    <p className="text-[11px] font-medium leading-relaxed text-slate-600">{h.comment}</p>
                   </div>
                 ))}
               </div>
             </CardContent>
           </Card>
         </div>
-
-        <div className="flex justify-end gap-3 p-8 bg-slate-50 border-t border-slate-100">
-          <Button 
-            variant="outline" 
-            className="rounded-xl h-11 px-6 border-slate-200 hover:bg-white transition-all font-semibold"
-            onClick={() => onAction("REWORK")} 
-            disabled={isSubmitting}
-          >
-            <RotateCcw className="h-4 w-4 mr-2 text-amber-600" />
-            Rework
-          </Button>
-          <Button 
-            variant="destructive" 
-            className="rounded-xl h-11 px-6 shadow-lg shadow-red-500/10 font-semibold"
-            onClick={() => onAction("REJECT")} 
-            disabled={isSubmitting}
-          >
-            <XCircle className="h-4 w-4 mr-2" />
-            Reject
-          </Button>
-          <Button 
-            className="rounded-xl bg-emerald-600 hover:bg-emerald-700 h-11 px-6 shadow-lg shadow-emerald-500/20 text-white font-bold"
-            onClick={() => onAction("APPROVE")} 
-            disabled={isSubmitting}
-          >
-            <CheckCircle2 className="h-4 w-4 mr-2" />
-            Approve & Lock
-          </Button>
         </div>
+
+        {isPendingApproval && (
+          <div className="flex shrink-0 flex-col-reverse gap-3 border-t border-slate-100 bg-slate-50 p-8 sm:flex-row sm:flex-wrap sm:justify-end">
+            <Button 
+              variant="outline" 
+              className="h-11 rounded-xl border-slate-200 px-6 font-semibold text-slate-800 transition-all hover:bg-white disabled:opacity-60"
+              onClick={() => onAction("REWORK")} 
+              disabled={isSubmittingAction}
+            >
+              {isSubmittingAction ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RotateCcw className="mr-2 h-4 w-4 text-amber-600" />}
+              Request Rework
+            </Button>
+            <Button 
+              variant="destructive" 
+              className="h-11 rounded-xl bg-red-600 px-6 font-semibold text-white shadow-lg shadow-red-500/15 hover:bg-red-700 disabled:opacity-60"
+              onClick={() => onAction("REJECT")} 
+              disabled={isSubmittingAction}
+            >
+              {isSubmittingAction ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <XCircle className="mr-2 h-4 w-4" />}
+              Reject Goal
+            </Button>
+            <Button 
+              className="h-11 rounded-xl bg-emerald-600 px-6 font-bold text-white shadow-lg shadow-emerald-500/20 hover:bg-emerald-700 disabled:opacity-60"
+              onClick={() => onAction("APPROVE")} 
+              disabled={isSubmittingAction}
+            >
+              {isSubmittingAction ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle2 className="mr-2 h-4 w-4" />}
+              Approve Goal
+            </Button>
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   );

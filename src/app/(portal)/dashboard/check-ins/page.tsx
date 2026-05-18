@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { PlusCircle, History, Target, Activity } from "lucide-react";
 import { StatusBadge } from "@/components/goals/StatusBadge";
 import { cn } from "@/lib/utils";
+import Link from "next/link";
 
 export default async function CheckInsPage() {
   const goals = await getEmployeeCheckIns();
@@ -25,9 +26,11 @@ export default async function CheckInsPage() {
           <p className="text-slate-400 max-w-sm mt-3 font-medium text-lg leading-relaxed">
             Quarterly updates are only enabled for goals that have completed the managerial approval governance cycle.
           </p>
-          <Button className="mt-8 rounded-xl bg-blue-600 hover:bg-blue-700 h-12 px-8 font-bold shadow-lg shadow-blue-500/20">
-            Visit Goals Command
-          </Button>
+          <Link href="/dashboard/goals">
+            <Button className="mt-8 rounded-xl bg-blue-600 hover:bg-blue-700 h-12 px-8 font-bold shadow-lg shadow-blue-500/20">
+              Visit Goals Command
+            </Button>
+          </Link>
         </div>
       </div>
     );
@@ -44,6 +47,7 @@ export default async function CheckInsPage() {
         {goals.map((goal) => {
           const latestCheckIn = goal.checkIns[0];
           const progress = latestCheckIn?.progress || 0;
+          const isLockedGoal = String(goal.status) === "LOCKED" || String(goal.status) === "LOCKED_APPROVED";
           
           return (
             <Card key={goal.id} className="border-none shadow-[0_8px_30px_rgb(0,0,0,0.02)] rounded-[32px] overflow-hidden bg-white flex flex-col group hover:shadow-[0_20px_50px_rgba(0,0,0,0.06)] transition-all duration-500">
@@ -81,40 +85,54 @@ export default async function CheckInsPage() {
                 </div>
 
                 <div className="flex gap-3 pt-4">
-                  <Dialog>
-                    <DialogTrigger asChild>
-                      <Button className="flex-1 rounded-xl bg-slate-900 hover:bg-slate-800 text-white h-12 font-bold shadow-lg transition-all hover:scale-105 active:scale-95">
-                        <PlusCircle className="mr-2 h-4 w-4" />
-                        Execute Update
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto rounded-[2.5rem] border-none shadow-2xl p-0 overflow-hidden">
-                      <div className="bg-slate-900 p-10 text-white relative">
-                         <div className="absolute top-0 right-0 w-64 h-64 bg-blue-600/10 rounded-full blur-[100px] -mr-32 -mt-32" />
-                         <DialogHeader className="relative z-10">
-                            <DialogTitle className="text-3xl font-black tracking-tight">Quarterly Intelligence</DialogTitle>
-                            <DialogDescription className="text-slate-400 mt-2 font-medium">
-                            Synthesizing progress for objective: {goal.title}
-                            </DialogDescription>
-                        </DialogHeader>
-                      </div>
-                      <div className="p-10 bg-white">
-                        <CheckInForm 
-                            goalId={goal.id} 
-                            goalTitle={goal.title} 
-                            defaultValues={{
-                                progress: progress,
-                                status: latestCheckIn?.status || "ON_TRACK"
-                            }}
-                        />
-                      </div>
-                    </DialogContent>
-                  </Dialog>
+                  {!isLockedGoal ? (
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <Button className="flex-1 rounded-xl bg-slate-900 hover:bg-slate-800 text-white h-12 font-bold shadow-lg transition-all hover:scale-105 active:scale-95">
+                          <PlusCircle className="mr-2 h-4 w-4" />
+                          Execute Update
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="flex max-h-[92vh] max-w-2xl flex-col overflow-hidden rounded-[2.5rem] border-none p-0 shadow-2xl">
+                        <div className="shrink-0 bg-slate-900 p-10 text-white relative">
+                           <div className="absolute top-0 right-0 w-64 h-64 bg-blue-600/10 rounded-full blur-[100px] -mr-32 -mt-32" />
+                           <DialogHeader className="relative z-10">
+                              <DialogTitle className="text-3xl font-black tracking-tight">Quarterly Intelligence</DialogTitle>
+                              <DialogDescription className="text-slate-400 mt-2 font-medium">
+                              Synthesizing progress for objective: {goal.title}
+                              </DialogDescription>
+                          </DialogHeader>
+                        </div>
+                        <div className="min-h-0 flex-1 overflow-y-auto bg-white p-10">
+                          <CheckInForm 
+                              goalId={goal.id} 
+                              uom={goal.uom}
+                              target={goal.target}
+                              defaultValues={{
+                                  progress: progress,
+                                  status: latestCheckIn?.status || "ON_TRACK"
+                              }}
+                          />
+                        </div>
+                      </DialogContent>
+                    </Dialog>
+                  ) : (
+                    <Button
+                      disabled
+                      className={cn(
+                        "h-12 flex-1 justify-center rounded-xl border font-bold shadow-none opacity-100",
+                        "border-slate-300 bg-slate-200 text-slate-800 disabled:bg-slate-200 disabled:text-slate-800"
+                      )}
+                    >
+                      <PlusCircle className="mr-2 h-4 w-4 text-slate-700" />
+                      Locked
+                    </Button>
+                  )}
 
                   <Dialog>
                     <DialogTrigger asChild>
-                      <Button variant="outline" className="rounded-xl border-slate-200 h-12 px-4 hover:bg-slate-50 transition-all hover:scale-105 active:scale-95">
-                        <History className="h-5 w-5 text-slate-400" />
+                      <Button variant="outline" className="shrink-0 rounded-xl border-slate-200 h-12 px-4 text-slate-600 hover:bg-slate-50 transition-all hover:scale-105 active:scale-95">
+                        <History className="h-5 w-5 text-slate-500" />
                       </Button>
                     </DialogTrigger>
                     <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto rounded-[2.5rem] border-none shadow-2xl p-0 overflow-hidden">

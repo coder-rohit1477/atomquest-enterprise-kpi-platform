@@ -92,13 +92,13 @@ export default async function TeamGoalsPage() {
           <CardHeader className="p-8 pb-2">
             <CardTitle className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-200">Governance Attention</CardTitle>
           </CardHeader>
-          <CardContent className="p-8 pt-4 flex flex-col h-full">
+          <CardContent className="flex min-h-[180px] flex-col gap-6 p-8 pt-4">
             <div className="text-5xl font-black text-white tracking-tighter mb-2">
               {pendingCount}
             </div>
-            <p className="text-sm font-bold text-blue-100/80 mb-6 italic">Strategic items awaiting managerial sign-off</p>
-            <Link href="/manager/dashboard" className="mt-auto">
-              <Button className="w-full bg-white text-blue-600 hover:bg-blue-50 rounded-xl font-black text-xs uppercase tracking-widest h-12 shadow-lg">
+            <p className="text-sm font-bold text-blue-100/80 italic">Strategic items awaiting managerial sign-off</p>
+            <Link href="/manager/dashboard" className="mt-auto block w-full">
+              <Button className="h-12 w-full rounded-xl bg-white text-blue-600 shadow-lg font-black text-xs uppercase tracking-widest hover:bg-blue-50">
                 Access Review Queue
               </Button>
             </Link>
@@ -187,9 +187,10 @@ export default async function TeamGoalsPage() {
                                     <StatusBadge status={goal.status} />
                                   </td>
                                   <td className="px-8 py-6 text-right">
-                                    <Link href="/manager/dashboard">
-                                      <Button variant="ghost" size="sm" className="h-10 w-10 rounded-xl bg-slate-50 hover:bg-blue-600 hover:text-white transition-all p-0">
-                                        <ChevronRight className="h-5 w-5" />
+                                    <Link href={`/manager/dashboard?userId=${employee.id}`}>
+                                      <Button variant="outline" size="sm" className="h-10 rounded-xl border-slate-200 px-3 font-bold text-slate-700 hover:bg-blue-600 hover:text-white transition-all">
+                                        <ChevronRight className="mr-2 h-4 w-4" />
+                                        View
                                       </Button>
                                     </Link>
                                   </td>

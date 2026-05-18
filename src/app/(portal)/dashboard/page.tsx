@@ -76,7 +76,7 @@ export default async function DashboardPage() {
     title: act.goal.title,
     time: formatDistanceToNow(new Date(act.createdAt), { addSuffix: true }),
     user: act.toStatus === "PENDING_APPROVAL" ? "Employee" : "Management",
-    link: role === "MANAGER" ? "/manager/dashboard" : "/dashboard/goals",
+    link: role === "MANAGER" ? "/manager/dashboard" : role === "ADMIN" ? "/admin/users" : "/dashboard/goals",
     status: act.toStatus
   }));
 
@@ -235,7 +235,7 @@ export default async function DashboardPage() {
               ))}
             </div>
             <div className="p-4 bg-slate-50/50">
-               <Link href={role === "MANAGER" ? "/manager/dashboard" : "/dashboard/goals"}>
+               <Link href={role === "MANAGER" ? "/manager/dashboard" : role === "ADMIN" ? "/admin/users" : "/dashboard/goals"}>
                  <Button variant="ghost" className="w-full text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 hover:text-slate-900">Enter Activity Command Center</Button>
                </Link>
             </div>

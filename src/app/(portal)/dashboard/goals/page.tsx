@@ -7,16 +7,16 @@ import * as z from "zod";
 import { 
   Plus, 
   Trash2, 
-  Save, 
   Send, 
   AlertCircle, 
   CheckCircle2, 
   Info,
   Target,
   Scale,
-  ChevronRight,
   Loader2,
-  BarChart3
+  BarChart3,
+  Eye,
+  Pencil
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -66,7 +66,7 @@ const GoalSchema = z.object({
   thrustArea: z.string().min(1, "Thrust area is required"),
   uom: z.string().min(1, "Unit of measurement is required"),
   target: z.coerce.number().min(1),
-  weightage: z.coerce.number().min(1).max(100),
+  weightage: z.coerce.number().min(10, "Minimum weightage is 10%").max(100),
 });
 
 type GoalFormValues = z.infer<typeof GoalSchema>;
@@ -84,6 +84,18 @@ interface GoalData {
   isShared: boolean;
   sharedGoalId: string | null;
 }
+
+const LOCKED_GOAL_STATUSES = new Set<GoalData["status"] | "LOCKED_APPROVED">([
+  "LOCKED",
+  "LOCKED_APPROVED",
+]);
+
+const EDITABLE_GOAL_STATUSES = new Set<GoalData["status"]>([
+  "DRAFT",
+  "REJECTED",
+  "PENDING_APPROVAL",
+  "APPROVED",
+]);
 
 const THRUST_AREAS = [
   "Strategic Growth",
@@ -134,6 +146,17 @@ export default function GoalsPage() {
   const totalWeightage = useMemo(() => goals.reduce((sum, g) => sum + g.weightage, 0), [goals]);
   const isAllSubmitted = goals.length > 0 && goals.every(g => g.status !== "DRAFT" && g.status !== "REJECTED");
   const canSubmit = goals.length > 0 && totalWeightage === 100 && !isAllSubmitted;
+  const isReadOnlyGoal = !!editingGoal && LOCKED_GOAL_STATUSES.has(editingGoal.status);
+  const isFieldLockedForSharedGoal = false;
+  const isWeightageFieldLocked = isReadOnlyGoal;
+  const canSubmitGoalForm = !isReadOnlyGoal;
+
+  const refreshGoals = async () => {
+    setIsLoading(true);
+    const data = await getGoals();
+    setGoals(data as unknown as GoalData[]);
+    setIsLoading(false);
+  };
 
   const onSubmit = async (values: GoalFormValues) => {
     try {
@@ -145,10 +168,7 @@ export default function GoalsPage() {
       toast.success(values.id ? "Goal updated successfully" : "New goal created");
       setIsDialogOpen(false);
       form.reset();
-      setIsLoading(true);
-      const data = await getGoals();
-      setGoals(data as unknown as GoalData[]);
-      setIsLoading(false);
+      await refreshGoals();
     } catch {
       toast.error("An unexpected error occurred while saving.");
     }
@@ -163,10 +183,7 @@ export default function GoalsPage() {
         return;
       }
       toast.success("Goal removed");
-      setIsLoading(true);
-      const data = await getGoals();
-      setGoals(data as unknown as GoalData[]);
-      setIsLoading(false);
+      await refreshGoals();
     } catch {
       toast.error("Failed to delete goal");
     }
@@ -180,10 +197,7 @@ export default function GoalsPage() {
         toast.error(result.error);
       } else {
         toast.success("All goals submitted for manager review");
-        setIsLoading(true);
-        const data = await getGoals();
-        setGoals(data as unknown as GoalData[]);
-        setIsLoading(false);
+        await refreshGoals();
       }
     } catch {
       toast.error("Submission failed. Please check your connection.");
@@ -206,10 +220,24 @@ export default function GoalsPage() {
   };
 
   const openEditDialog = (goal: GoalData) => {
-    if (goal.status === "APPROVED" || goal.status === "LOCKED" || goal.status === "PENDING_APPROVAL") {
+    if (!EDITABLE_GOAL_STATUSES.has(goal.status)) {
       toast.error("This goal is locked and cannot be edited.");
       return;
     }
+    setEditingGoal(goal);
+    form.reset({
+      id: goal.id,
+      title: goal.title,
+      description: goal.description || "",
+      thrustArea: goal.thrustArea,
+      uom: goal.uom,
+      target: goal.target,
+      weightage: goal.weightage,
+    });
+    setIsDialogOpen(true);
+  };
+
+  const openViewDialog = (goal: GoalData) => {
     setEditingGoal(goal);
     form.reset({
       id: goal.id,
@@ -324,24 +352,24 @@ export default function GoalsPage() {
                               <BarChart3 className="h-5 w-5" />
                             </div>
                             <div className="space-y-1">
-                              <p className="font-bold text-slate-900 leading-none group-hover:text-blue-600 transition-colors">{goal.title}</p>
-                              <div className="flex items-center gap-2">
+                              <p className="font-bold leading-snug text-slate-900 group-hover:text-blue-600 transition-colors">{goal.title}</p>
+                              <div className="flex flex-wrap items-center gap-2">
                                 <Badge variant={
                                   goal.status === "DRAFT" ? "warning" : 
                                   goal.status === "PENDING_APPROVAL" ? "info" : 
                                   goal.status === "APPROVED" || goal.status === "LOCKED" ? "success" : "destructive"
-                                } className="text-[9px] h-4 font-black uppercase tracking-widest px-1.5 rounded-sm">
+                                } className="text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md border-none shadow-sm">
                                   {goal.status.replace('_', ' ')}
                                 </Badge>
                                 {goal.sharedGoalId && (
-                                  <Badge className="bg-indigo-500/10 text-indigo-600 border-indigo-200 text-[9px] h-4 font-black uppercase tracking-widest px-1.5 rounded-sm">
+                                  <Badge className="bg-indigo-500/10 text-indigo-600 border-indigo-200 text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md">
                                     Shared
                                   </Badge>
                                 )}
-                                <span className="text-[10px] text-slate-400 truncate max-w-[150px]">{goal.description || "No strategic context"}</span>
+                                <span className="max-w-[220px] break-words text-[11px] leading-relaxed text-slate-500">{goal.description || "No strategic context"}</span>
                               </div>
                               {goal.managerComment && (
-                                <p className="text-[10px] text-amber-600 font-medium mt-1 flex items-center gap-1">
+                                <p className="mt-1 flex items-start gap-1 text-[11px] font-medium leading-relaxed text-amber-700">
                                   <Info className="h-3 w-3" />
                                   Manager: {goal.managerComment}
                                 </p>
@@ -350,45 +378,56 @@ export default function GoalsPage() {
                           </div>
                         </TableCell>
                         <TableCell>
-                          <span className="text-xs font-bold text-slate-600 bg-slate-100/50 px-2 py-1 rounded-lg">
+                          <span className="inline-flex break-words rounded-lg bg-slate-100/70 px-2 py-1 text-xs font-bold text-slate-700">
                             {goal.thrustArea}
                           </span>
                         </TableCell>
                         <TableCell className="font-mono text-sm font-bold text-slate-700">
-                          {goal.target} <span className="text-[10px] font-sans font-bold text-slate-400 ml-0.5">{goal.uom.split(' ')[0]}</span>
+                          {goal.target} <span className="ml-0.5 text-[10px] font-sans font-bold text-slate-500">{goal.uom.split(' ')[0]}</span>
                         </TableCell>
                         <TableCell>
                           <div className="space-y-1.5">
                             <span className="font-black text-slate-900 text-sm">{goal.weightage}%</span>
-                            <div className="w-12 bg-slate-100 h-1 rounded-full overflow-hidden">
-                              <div className="bg-blue-600 h-full" style={{ width: `${goal.weightage}%` }} />
+                              <div className="w-12 bg-slate-100 h-1 rounded-full overflow-hidden">
+                                <div className="bg-blue-600 h-full" style={{ width: `${goal.weightage}%` }} />
+                              </div>
                             </div>
+                          </TableCell>
+                          <TableCell className="px-8 py-6 text-right">
+                          <div className="flex min-w-[200px] flex-wrap justify-end gap-2">
+                            {EDITABLE_GOAL_STATUSES.has(goal.status) ? (
+                              <>
+                                <Button 
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => openEditDialog(goal)}
+                                  className="h-9 shrink-0 rounded-xl border-slate-200 px-3 font-bold text-blue-700 hover:bg-blue-50"
+                                >
+                                  <Pencil className="mr-2 h-4 w-4" />
+                                  Edit
+                                </Button>
+                                <Button 
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleDelete(goal.id)}
+                                  className="h-9 shrink-0 rounded-xl border-red-200 px-3 font-bold text-red-700 hover:bg-red-50"
+                                >
+                                  <Trash2 className="mr-2 h-4 w-4" />
+                                  Delete
+                                </Button>
+                              </>
+                            ) : (
+                              <Button 
+                                variant="outline"
+                                size="sm"
+                                onClick={() => openViewDialog(goal)}
+                                className="h-9 shrink-0 rounded-xl border-slate-200 px-3 font-bold text-slate-800 hover:bg-slate-100"
+                              >
+                                <Eye className="mr-2 h-4 w-4" />
+                                View
+                              </Button>
+                            )}
                           </div>
-                        </TableCell>
-                        <TableCell className="text-right px-8">
-                          {((goal.status === "DRAFT" || goal.status === "REJECTED") && !goal.sharedGoalId) && (
-                            <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                              <Button 
-                                variant="ghost" 
-                                size="icon" 
-                                onClick={() => openEditDialog(goal)}
-                                className="h-9 w-9 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all"
-                              >
-                                <Save className="h-4 w-4" />
-                              </Button>
-                              <Button 
-                                variant="ghost" 
-                                size="icon" 
-                                onClick={() => handleDelete(goal.id)}
-                                className="h-9 w-9 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          )}
-                          {(goal.status !== "DRAFT" && goal.status !== "REJECTED") || goal.sharedGoalId ? (
-                            <ChevronRight className="h-4 w-4 text-slate-200 ml-auto" />
-                          ) : null}
                         </TableCell>
                       </TableRow>
                     ))}
@@ -492,10 +531,16 @@ export default function GoalsPage() {
           <DialogHeader className="bg-slate-900 text-white p-10 relative">
             <div className="absolute top-0 right-0 w-64 h-64 bg-blue-600/10 rounded-full blur-[100px] -mr-32 -mt-32 pointer-events-none" />
             <DialogTitle className="text-3xl font-black tracking-tight relative z-10">
-              {editingGoal ? "Edit Strategic Goal" : "New Strategic Entry"}
+              {editingGoal
+                ? isReadOnlyGoal
+                  ? "View Strategic Goal"
+                  : "Edit Strategic Goal"
+                : "New Strategic Entry"}
             </DialogTitle>
             <DialogDescription className="text-slate-400 mt-2 font-medium relative z-10">
-              Define measurable parameters for your performance objective.
+              {isReadOnlyGoal
+                ? "Locked goals are view-only and cannot be changed."
+                : "Define measurable parameters for your performance objective."}
             </DialogDescription>
           </DialogHeader>
           
@@ -509,7 +554,7 @@ export default function GoalsPage() {
                     <FormItem className="col-span-2">
                       <FormLabel className="font-bold text-slate-700 uppercase tracking-widest text-[10px]">Objective Title</FormLabel>
                       <FormControl>
-                        <Input placeholder="e.g. Optimize Cloud Infrastructure Costs" {...field} className="h-14 rounded-2xl border-slate-200 focus:ring-blue-600 focus:border-blue-600 font-bold" />
+                        <Input placeholder="e.g. Optimize Cloud Infrastructure Costs" {...field} disabled={isReadOnlyGoal || isFieldLockedForSharedGoal} className="h-14 rounded-2xl border-slate-200 focus:ring-blue-600 focus:border-blue-600 font-bold" />
                       </FormControl>
                       <FormMessage className="font-bold text-[10px]" />
                     </FormItem>
@@ -523,7 +568,7 @@ export default function GoalsPage() {
                     <FormItem className="col-span-2">
                       <FormLabel className="font-bold text-slate-700 uppercase tracking-widest text-[10px]">Context & Impact (Optional)</FormLabel>
                       <FormControl>
-                        <Input placeholder="Explain the high-level business value..." {...field} className="h-14 rounded-2xl border-slate-200 font-medium" />
+                        <Input placeholder="Explain the high-level business value..." {...field} disabled={isReadOnlyGoal || isFieldLockedForSharedGoal} className="h-14 rounded-2xl border-slate-200 font-medium" />
                       </FormControl>
                       <FormMessage className="font-bold text-[10px]" />
                     </FormItem>
@@ -536,7 +581,7 @@ export default function GoalsPage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="font-bold text-slate-700 uppercase tracking-widest text-[10px]">Strategic Area</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <Select onValueChange={field.onChange} value={field.value} disabled={isReadOnlyGoal || isFieldLockedForSharedGoal}>
                         <FormControl>
                           <SelectTrigger className="h-14 rounded-2xl border-slate-200 font-bold">
                             <SelectValue placeholder="Select area" />
@@ -559,7 +604,7 @@ export default function GoalsPage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="font-bold text-slate-700 uppercase tracking-widest text-[10px]">Measurement (UoM)</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <Select onValueChange={field.onChange} value={field.value} disabled={isReadOnlyGoal || isFieldLockedForSharedGoal}>
                         <FormControl>
                           <SelectTrigger className="h-14 rounded-2xl border-slate-200 font-bold">
                             <SelectValue placeholder="Select UoM" />
@@ -587,6 +632,7 @@ export default function GoalsPage() {
                           type="number" 
                           step="0.01" 
                           {...field} 
+                          disabled={isReadOnlyGoal || isFieldLockedForSharedGoal}
                           className="h-14 rounded-2xl border-slate-200 font-black" 
                         />
                       </FormControl>
@@ -607,6 +653,7 @@ export default function GoalsPage() {
                           min="10" 
                           max="100" 
                           {...field} 
+                          disabled={isWeightageFieldLocked}
                           className="h-14 rounded-2xl border-slate-200 font-black" 
                         />
                       </FormControl>
@@ -620,9 +667,11 @@ export default function GoalsPage() {
                 <Button type="button" variant="ghost" onClick={() => setIsDialogOpen(false)} className="rounded-xl h-12 px-8 font-bold text-slate-400 hover:text-slate-900">
                   Cancel
                 </Button>
-                <Button type="submit" className="rounded-xl bg-blue-600 hover:bg-blue-700 h-12 px-10 shadow-xl shadow-blue-500/20 font-bold ml-auto transition-all hover:scale-[1.05]">
-                  {editingGoal ? "Apply Updates" : "Save Objective"}
-                </Button>
+                {canSubmitGoalForm && (
+                  <Button type="submit" className="rounded-xl bg-blue-600 hover:bg-blue-700 h-12 px-10 shadow-xl shadow-blue-500/20 font-bold ml-auto transition-all hover:scale-[1.05]">
+                    {editingGoal ? "Apply Updates" : "Save Objective"}
+                  </Button>
+                )}
               </DialogFooter>
             </form>
           </Form>

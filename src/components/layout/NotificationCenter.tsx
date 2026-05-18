@@ -15,6 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { getNotifications, markAsRead, markAllAsRead } from "@/actions/notifications";
 import { formatDistanceToNow } from "date-fns";
 import Link from "next/link";
+import { normalizeAppHref } from "@/lib/route-map";
 
 interface Notification {
   id: string;
@@ -31,31 +32,53 @@ export function NotificationCenter() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [isOpen, setIsOpen] = useState(false);
 
-  useEffect(() => {
-    const fetchNotifications = async () => {
-        const data = await getNotifications();
-        setNotifications(data as Notification[]);
-        setUnreadCount(data.filter((n) => !n.isRead).length);
-    };
-
-    fetchNotifications();
-    // Poll for new notifications every 30 seconds
-    const interval = setInterval(fetchNotifications, 30000);
-    return () => clearInterval(interval);
-  }, []);
-
-  const handleMarkAsRead = async (id: string) => {
-    await markAsRead(id);
+  const refreshNotifications = async () => {
     const data = await getNotifications();
     setNotifications(data as Notification[]);
     setUnreadCount(data.filter((n) => !n.isRead).length);
   };
 
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      void refreshNotifications();
+    }, 0);
+    // Poll for new notifications every 30 seconds
+    const interval = window.setInterval(() => {
+      void refreshNotifications();
+    }, 30000);
+    return () => {
+      window.clearTimeout(timer);
+      window.clearInterval(interval);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (isOpen) {
+      const timer = window.setTimeout(() => {
+        void refreshNotifications();
+      }, 0);
+      return () => window.clearTimeout(timer);
+    }
+  }, [isOpen]);
+
+  const handleMarkAsRead = async (id: string) => {
+    setNotifications((current) =>
+      current.map((notification) =>
+        notification.id === id ? { ...notification, isRead: true } : notification
+      )
+    );
+    setUnreadCount((current) => Math.max(current - 1, 0));
+    await markAsRead(id);
+    await refreshNotifications();
+  };
+
   const handleMarkAllAsRead = async () => {
+    setNotifications((current) =>
+      current.map((notification) => ({ ...notification, isRead: true }))
+    );
+    setUnreadCount(0);
     await markAllAsRead();
-    const data = await getNotifications();
-    setNotifications(data as Notification[]);
-    setUnreadCount(data.filter((n) => !n.isRead).length);
+    await refreshNotifications();
   };
 
   const getTypeIcon = (type: string) => {
@@ -74,8 +97,8 @@ export function NotificationCenter() {
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" className="rounded-xl border-slate-200 h-11 px-5 relative">
-          <Bell className="h-4 w-4 mr-2 text-slate-500" />
+        <Button variant="outline" className="relative h-11 rounded-xl border-slate-200 px-5 font-semibold text-slate-800 hover:bg-slate-50">
+          <Bell className="mr-2 h-4 w-4 text-slate-700" />
           Notifications
           {unreadCount > 0 && (
             <Badge className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full px-2 py-0.5 text-[10px] min-w-[20px] flex items-center justify-center border-2 border-white">
@@ -87,13 +110,13 @@ export function NotificationCenter() {
       <DialogContent className="sm:max-w-[425px] p-0 overflow-hidden rounded-2xl">
         <DialogHeader className="p-6 border-b bg-slate-50/50">
           <div className="flex items-center justify-between">
-            <DialogTitle className="text-lg font-bold">Notification Center</DialogTitle>
+            <DialogTitle className="text-lg font-bold text-slate-900">Notification Center</DialogTitle>
             <DialogDescription className="sr-only">View and manage your recent enterprise notifications.</DialogDescription>
             {unreadCount > 0 && (
               <Button 
                 variant="ghost" 
                 size="sm" 
-                className="text-xs text-blue-600 hover:text-blue-700 font-semibold"
+                className="text-xs font-semibold text-blue-700 hover:text-blue-800"
                 onClick={handleMarkAllAsRead}
               >
                 Mark all as read
@@ -108,19 +131,20 @@ export function NotificationCenter() {
                 <Bell className="h-6 w-6 text-slate-300" />
               </div>
               <p className="text-sm font-medium text-slate-900">All caught up!</p>
-              <p className="text-xs text-slate-400">You don&apos;t have any new notifications at the moment.</p>
+              <p className="text-xs text-slate-500">You don&apos;t have any new notifications at the moment.</p>
             </div>
           ) : (
             <div className="divide-y divide-slate-100">
               {notifications.map((n) => (
                 <div
                   key={n.id}
-                  className={`p-4 hover:bg-slate-50 transition-colors cursor-pointer relative ${
+                  className={`relative p-4 transition-colors hover:bg-slate-50 ${
                     !n.isRead ? "bg-blue-50/30" : ""
                   }`}
                   onClick={() => {
-                    if (!n.isRead) handleMarkAsRead(n.id);
-                    if (n.link) setIsOpen(false);
+                    if (!n.link && !n.isRead) {
+                      void handleMarkAsRead(n.id);
+                    }
                   }}
                 >
                   <div className="flex gap-4">
@@ -131,27 +155,35 @@ export function NotificationCenter() {
                     }`}>
                       {getTypeIcon(n.type)}
                     </div>
-                    <div className="space-y-1 overflow-hidden">
-                      <div className="flex items-center justify-between gap-2">
-                        <p className={`text-sm font-bold truncate ${!n.isRead ? "text-slate-900" : "text-slate-600"}`}>
+                    <div className="min-w-0 flex-1 space-y-1.5 pr-4">
+                      <div className="flex items-start justify-between gap-2">
+                        <p className={`text-sm font-black leading-snug ${!n.isRead ? "text-slate-900" : "text-slate-600"}`}>
                           {n.title}
                         </p>
-                        <span className="text-[10px] text-slate-400 flex items-center gap-1 shrink-0">
+                        <span className="mt-0.5 flex shrink-0 items-center gap-1 whitespace-nowrap text-[10px] font-bold text-slate-500">
                           <Clock className="h-3 w-3" />
                           {formatDistanceToNow(new Date(n.createdAt), { addSuffix: true })}
                         </span>
                       </div>
-                      <p className="text-xs text-slate-500 leading-relaxed">
+                      <p className="text-xs text-slate-500 font-medium leading-relaxed break-words">
                         {n.message}
                       </p>
-                      {n.link && (
-                        <Link 
-                          href={n.link} 
-                          className="text-[10px] font-bold text-blue-600 hover:underline inline-block mt-1"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          View Details
-                        </Link>
+                      {normalizeAppHref(n.link) && (
+                        <div className="pt-1">
+                          <Link 
+                            href={normalizeAppHref(n.link) ?? "/dashboard"} 
+                            className="inline-flex items-center rounded-md bg-blue-50 px-2 py-1 text-[11px] font-black text-blue-600 transition-colors hover:text-blue-700"
+                            onClick={async (e) => {
+                               e.stopPropagation();
+                               if (!n.isRead) {
+                                await handleMarkAsRead(n.id);
+                               }
+                               setIsOpen(false);
+                            }}
+                          >
+                            View Details
+                          </Link>
+                        </div>
                       )}
                     </div>
                     {!n.isRead && (
@@ -164,11 +196,6 @@ export function NotificationCenter() {
               ))}
             </div>
           )}
-        </div>
-        <div className="p-4 bg-slate-50 border-t">
-          <Button variant="ghost" className="w-full text-xs font-bold uppercase tracking-widest text-slate-500 hover:text-slate-900">
-            Settings
-          </Button>
         </div>
       </DialogContent>
     </Dialog>
