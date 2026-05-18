@@ -58,6 +58,13 @@ import { Badge } from "@/components/ui/badge";
 import { getGoals, upsertGoal, deleteGoal, submitGoals } from "@/actions/goals";
 import { cn } from "@/lib/utils";
 import { GoalStatus } from "@prisma/client";
+import { ActivityTimeline } from "@/components/activity/activity-timeline";
+import {
+  mapApprovalHistoryToTimeline,
+  mapManagerCommentToTimeline,
+  mapProgressHistoryToTimeline,
+  sortTimeline,
+} from "@/lib/activity-timeline";
 
 const GoalSchema = z.object({
   id: z.string().optional(),
@@ -83,6 +90,19 @@ interface GoalData {
   managerComment: string | null;
   isShared: boolean;
   sharedGoalId: string | null;
+  history?: Array<{
+    id: string;
+    fromStatus: GoalStatus;
+    toStatus: GoalStatus;
+    comment: string | null;
+    createdAt: string | Date;
+  }>;
+  progressHistory?: Array<{
+    id: string;
+    progress: number;
+    status: string;
+    createdAt: string | Date;
+  }>;
 }
 
 const LOCKED_GOAL_STATUSES = new Set<GoalData["status"] | "LOCKED_APPROVED">([
@@ -150,6 +170,28 @@ export default function GoalsPage() {
   const isFieldLockedForSharedGoal = false;
   const isWeightageFieldLocked = isReadOnlyGoal;
   const canSubmitGoalForm = !isReadOnlyGoal;
+  const goalTimelineItems = editingGoal
+    ? sortTimeline([
+        ...(editingGoal.sharedGoalId
+          ? []
+          : [
+              {
+                id: `created-${editingGoal.id}`,
+                type: "goal_created" as const,
+                title: "Goal created",
+                description: editingGoal.title,
+                timestamp: editingGoal.history?.[editingGoal.history.length - 1]?.createdAt ?? new Date(),
+              },
+            ]),
+        ...mapApprovalHistoryToTimeline(editingGoal.history ?? []),
+        ...mapProgressHistoryToTimeline(editingGoal.progressHistory ?? []),
+        ...mapManagerCommentToTimeline(
+          editingGoal.managerComment,
+          editingGoal.id,
+          editingGoal.history?.[0]?.createdAt ?? new Date()
+        ),
+      ])
+    : [];
 
   const refreshGoals = async () => {
     setIsLoading(true);
@@ -662,6 +704,16 @@ export default function GoalsPage() {
                   )}
                 />
               </div>
+
+              {editingGoal && (
+                <ActivityTimeline
+                  title="Goal Activity Timeline"
+                  items={goalTimelineItems}
+                  maxHeightClassName="max-h-[220px]"
+                  emptyTitle="No activity yet"
+                  emptyDescription="Goal lifecycle and progress events will appear here."
+                />
+              )}
 
               <DialogFooter className="pt-8 border-t border-slate-50 gap-4 flex items-center">
                 <Button type="button" variant="ghost" onClick={() => setIsDialogOpen(false)} className="rounded-xl h-12 px-8 font-bold text-slate-400 hover:text-slate-900">

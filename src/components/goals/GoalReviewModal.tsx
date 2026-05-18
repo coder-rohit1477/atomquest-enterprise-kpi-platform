@@ -16,8 +16,13 @@ import { Goal, ApprovalHistory } from "@prisma/client";
 import { StatusBadge } from "./StatusBadge";
 import { handleManagerAction, saveManagerReviewDraft } from "@/actions/goals";
 import { toast } from "sonner";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CheckCircle2, Loader2, XCircle, RotateCcw, MessageSquare, History, Target, Save } from "lucide-react";
+import { ActivityTimeline } from "@/components/activity/activity-timeline";
+import {
+  mapApprovalHistoryToTimeline,
+  mapManagerCommentToTimeline,
+  sortTimeline,
+} from "@/lib/activity-timeline";
 
 interface GoalReviewModalProps {
   goal: Goal & { history: ApprovalHistory[] };
@@ -36,6 +41,10 @@ export function GoalReviewModal({ goal, isOpen, onClose, onActionComplete }: Goa
   const isPendingApproval = goal.status === "PENDING_APPROVAL";
   const trimmedComment = comment.trim();
   const canSaveFeedback = trimmedComment.length > 0 && !isSavingFeedback && !isSubmittingAction;
+  const timelineItems = sortTimeline([
+    ...mapApprovalHistoryToTimeline(goal.history),
+    ...mapManagerCommentToTimeline(goal.managerComment, goal.id, goal.updatedAt),
+  ]);
 
   const onAction = async (action: "APPROVE" | "REJECT" | "REWORK") => {
     if (!isPendingApproval) {
@@ -195,35 +204,13 @@ export function GoalReviewModal({ goal, isOpen, onClose, onActionComplete }: Goa
             </Button>
           </div>
 
-          <Card className="overflow-hidden rounded-2xl border-none bg-slate-50">
-            <CardHeader className="py-4 px-6 border-b border-white">
-              <CardTitle className="text-xs font-bold uppercase tracking-widest text-slate-500 flex items-center gap-2">
-                <History className="h-3 w-3" />
-                Audit Trail
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="max-h-[280px] overflow-y-auto p-6">
-              <div className="space-y-4">
-                {goal.history.length === 0 && (
-                  <p className="text-xs italic text-slate-500">No historical actions recorded.</p>
-                )}
-                {goal.history.map((h) => (
-                  <div key={h.id} className="relative pl-6 pb-2 border-l border-slate-200 last:border-0 last:pb-0">
-                    <div className="absolute left-[-5px] top-0 h-2.5 w-2.5 rounded-full bg-blue-500 border-2 border-white" />
-                    <div className="flex justify-between items-start mb-1">
-                      <span className="text-xs font-bold text-slate-700 uppercase tracking-tighter">
-                        {h.fromStatus} → {h.toStatus}
-                      </span>
-                      <span className="text-[10px] font-medium text-slate-500">
-                        {new Date(h.createdAt).toLocaleDateString()}
-                      </span>
-                    </div>
-                    <p className="text-[11px] font-medium leading-relaxed text-slate-600">{h.comment}</p>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+          <ActivityTimeline
+            title="Review Activity Timeline"
+            items={timelineItems}
+            maxHeightClassName="max-h-[280px]"
+            emptyTitle="No review activity yet"
+            emptyDescription="Goal lifecycle events will appear here as decisions and comments are recorded."
+          />
         </div>
         </div>
 

@@ -28,6 +28,10 @@ export async function getGoals() {
     include: {
       history: {
         orderBy: { createdAt: "desc" }
+      },
+      progressHistory: {
+        orderBy: { createdAt: "desc" },
+        take: 20,
       }
     }
   });

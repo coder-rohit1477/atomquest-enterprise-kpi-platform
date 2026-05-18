@@ -4,9 +4,12 @@ import { Badge } from "@/components/ui/badge";
 import { FileText, Clock, User, Activity } from "lucide-react";
 import { getAuditLogs } from "@/actions/audit";
 import { format } from "date-fns";
+import { ActivityTimeline } from "@/components/activity/activity-timeline";
+import { mapAuditLogToTimeline, sortTimeline } from "@/lib/activity-timeline";
 
 export default async function LogsPage() {
   const logs = await getAuditLogs();
+  const timelineItems = sortTimeline(logs.map((log) => mapAuditLogToTimeline(log)));
 
   return (
     <div className="max-w-7xl mx-auto space-y-8 py-6 px-4">
@@ -32,6 +35,15 @@ export default async function LogsPage() {
           </div>
         </CardHeader>
         <CardContent className="p-0">
+          <div className="p-8 border-b border-slate-50 bg-slate-50/30">
+            <ActivityTimeline
+              title="Enterprise Activity Timeline"
+              items={timelineItems}
+              maxHeightClassName="max-h-[360px]"
+              emptyTitle="No audit activity yet"
+              emptyDescription="System and workflow events will appear here as operations are performed."
+            />
+          </div>
           {logs.length === 0 ? (
             <div className="p-24 text-center flex flex-col items-center justify-center space-y-6">
               <div className="relative">
