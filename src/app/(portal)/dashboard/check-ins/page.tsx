@@ -93,8 +93,8 @@ export default async function CheckInsPage() {
                           Execute Update
                         </Button>
                       </DialogTrigger>
-                      <DialogContent className="flex max-h-[92vh] max-w-2xl flex-col overflow-hidden rounded-[2.5rem] border-none p-0 shadow-2xl">
-                        <div className="shrink-0 bg-slate-900 p-10 text-white relative">
+                      <DialogContent className="flex w-[calc(100vw-1rem)] max-w-2xl flex-col overflow-hidden rounded-2xl border-none p-0 shadow-2xl sm:w-[calc(100vw-2rem)] sm:rounded-[2.5rem] md:max-h-[90dvh]">
+                        <div className="relative shrink-0 bg-slate-900 p-6 text-white sm:p-8 lg:p-10">
                            <div className="absolute top-0 right-0 w-64 h-64 bg-blue-600/10 rounded-full blur-[100px] -mr-32 -mt-32" />
                            <DialogHeader className="relative z-10">
                               <DialogTitle className="text-3xl font-black tracking-tight">Quarterly Intelligence</DialogTitle>
@@ -103,7 +103,7 @@ export default async function CheckInsPage() {
                               </DialogDescription>
                           </DialogHeader>
                         </div>
-                        <div className="min-h-0 flex-1 overflow-y-auto bg-white p-10">
+                        <div className="min-h-0 flex-1 overflow-y-auto bg-white p-4 sm:p-6 lg:p-10">
                           <CheckInForm 
                               goalId={goal.id} 
                               uom={goal.uom}
@@ -135,8 +135,8 @@ export default async function CheckInsPage() {
                         <History className="h-5 w-5 text-slate-500" />
                       </Button>
                     </DialogTrigger>
-                    <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto rounded-[2.5rem] border-none shadow-2xl p-0 overflow-hidden">
-                       <div className="bg-slate-900 p-10 text-white relative">
+                    <DialogContent className="flex w-[calc(100vw-1rem)] max-w-3xl flex-col overflow-hidden rounded-2xl border-none p-0 shadow-2xl sm:w-[calc(100vw-2rem)] sm:rounded-[2.5rem] md:max-h-[90dvh]">
+                       <div className="relative shrink-0 bg-slate-900 p-6 text-white sm:p-8 lg:p-10">
                          <div className="absolute top-0 right-0 w-64 h-64 bg-blue-600/10 rounded-full blur-[100px] -mr-32 -mt-32" />
                          <DialogHeader className="relative z-10">
                             <DialogTitle className="text-3xl font-black tracking-tight flex items-center gap-3">
@@ -148,7 +148,7 @@ export default async function CheckInsPage() {
                             </DialogDescription>
                         </DialogHeader>
                       </div>
-                      <div className="p-10 bg-slate-50/50">
+                      <div className="min-h-0 flex-1 overflow-y-auto bg-slate-50/50 p-4 sm:p-6 lg:p-10">
                         <CheckInHistory checkIns={goal.checkIns} />
                       </div>
                     </DialogContent>

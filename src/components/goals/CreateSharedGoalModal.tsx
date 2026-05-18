@@ -126,8 +126,8 @@ export function CreateSharedGoalModal({ team }: CreateSharedGoalModalProps) {
           Create Shared Goal
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-4xl rounded-[2.5rem] p-0 overflow-hidden border-none shadow-2xl">
-        <DialogHeader className="bg-slate-900 text-white p-10 relative">
+      <DialogContent className="flex w-[calc(100vw-1rem)] max-w-4xl flex-col overflow-hidden rounded-2xl border-none p-0 shadow-2xl sm:w-[calc(100vw-2rem)] sm:rounded-[2.5rem] md:max-h-[90dvh]">
+        <DialogHeader className="shrink-0 bg-slate-900 p-6 text-white relative sm:p-8 lg:p-10">
           <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-600/10 rounded-full blur-[100px] -mr-32 -mt-32 pointer-events-none" />
           <DialogTitle className="text-3xl font-black tracking-tight relative z-10 flex items-center gap-3">
             <Share2 className="h-8 w-8 text-indigo-400" />
@@ -139,11 +139,12 @@ export function CreateSharedGoalModal({ team }: CreateSharedGoalModalProps) {
         </DialogHeader>
         
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="bg-white">
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-0">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="flex min-h-0 flex-1 flex-col bg-white">
+            <div className="min-h-0 flex-1 overflow-y-auto">
+              <div className="grid grid-cols-1 md:grid-cols-5 gap-0">
               {/* Form Fields */}
-              <div className="md:col-span-3 p-10 space-y-8 border-r border-slate-50">
-                <div className="grid grid-cols-2 gap-6">
+                <div className="space-y-6 border-slate-50 p-4 sm:p-6 md:col-span-3 md:space-y-8 md:border-r lg:p-8">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6">
                   <FormField
                     control={form.control}
                     name="title"
@@ -249,13 +250,13 @@ export function CreateSharedGoalModal({ team }: CreateSharedGoalModalProps) {
               </div>
 
               {/* Employee Selection */}
-              <div className="md:col-span-2 bg-slate-50/50 p-10 flex flex-col">
-                <div className="flex items-center gap-2 mb-6">
+                <div className="flex flex-col bg-slate-50/50 p-4 sm:p-6 md:col-span-2 lg:p-8">
+                  <div className="mb-4 flex items-center gap-2 sm:mb-6">
                    <Users className="h-4 w-4 text-indigo-600" />
                    <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-500">Assign Recipients</h3>
                 </div>
 
-                <div className="space-y-3 flex-1 overflow-y-auto max-h-[300px] pr-2 custom-scrollbar">
+                  <div className="custom-scrollbar flex-1 space-y-3 overflow-y-auto pr-1 md:max-h-[380px]">
                   {team.length === 0 ? (
                     <div className="text-center py-10">
                        <p className="text-xs font-bold text-slate-400 italic">No direct reports found</p>
@@ -301,7 +302,7 @@ export function CreateSharedGoalModal({ team }: CreateSharedGoalModalProps) {
                   )}
                 </div>
 
-                <div className="mt-8 pt-8 border-t border-slate-100">
+                  <div className="mt-6 border-t border-slate-100 pt-6 sm:mt-8 sm:pt-8">
                    <div className="bg-indigo-50 p-4 rounded-2xl border border-indigo-100 flex items-start gap-3">
                       <Info className="h-4 w-4 text-indigo-600 shrink-0 mt-0.5" />
                       <p className="text-[10px] font-bold text-indigo-900 leading-relaxed">
@@ -309,14 +310,15 @@ export function CreateSharedGoalModal({ team }: CreateSharedGoalModalProps) {
                       </p>
                    </div>
                 </div>
+                </div>
               </div>
             </div>
 
-            <DialogFooter className="p-8 bg-slate-50 border-t border-slate-100 gap-4">
-              <Button type="button" variant="ghost" onClick={() => setIsOpen(false)} className="rounded-xl h-12 px-8 font-bold text-slate-400">
+            <DialogFooter className="sticky bottom-0 shrink-0 gap-3 border-t border-slate-100 bg-slate-50 p-4 sm:p-6 lg:p-8">
+              <Button type="button" variant="ghost" onClick={() => setIsOpen(false)} className="h-11 rounded-xl px-6 font-bold text-slate-400 sm:h-12 sm:px-8">
                 Discard
               </Button>
-              <Button type="submit" disabled={isSubmitting} className="rounded-xl bg-slate-900 hover:bg-slate-800 text-white h-12 px-10 shadow-xl font-bold transition-all hover:scale-[1.05]">
+              <Button type="submit" disabled={isSubmitting} className="h-11 rounded-xl bg-slate-900 px-6 text-white shadow-xl font-bold transition-all hover:scale-[1.05] hover:bg-slate-800 sm:h-12 sm:px-10">
                 {isSubmitting ? <Loader2 className="h-5 w-5 animate-spin mr-2" /> : <Share2 className="h-5 w-5 mr-2" />}
                 Deploy Shared Objective
               </Button>

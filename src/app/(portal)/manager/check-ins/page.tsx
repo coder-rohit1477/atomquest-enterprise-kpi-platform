@@ -108,8 +108,8 @@ export default async function ManagerCheckInsPage() {
                                         Review Activity
                                     </Button>
                                 </DialogTrigger>
-                                <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto rounded-[32px] border-none shadow-2xl p-0">
-                                    <div className="bg-slate-900 p-10 text-white relative overflow-hidden">
+                                <DialogContent className="flex w-[calc(100vw-1rem)] max-w-4xl flex-col overflow-hidden rounded-2xl border-none p-0 shadow-2xl sm:w-[calc(100vw-2rem)] sm:rounded-[32px] md:max-h-[90dvh]">
+                                    <div className="relative shrink-0 overflow-hidden bg-slate-900 p-6 text-white sm:p-8 lg:p-10">
                                         <div className="absolute top-0 right-0 w-64 h-64 bg-blue-600/10 rounded-full blur-[100px] -mr-32 -mt-32 pointer-events-none" />
                                         <DialogHeader>
                                             <div className="flex items-center gap-4 mb-4">
@@ -127,8 +127,8 @@ export default async function ManagerCheckInsPage() {
                                         </DialogHeader>
                                     </div>
                                     
-                                    <div className="p-10 bg-white">
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+                                    <div className="min-h-0 flex-1 overflow-y-auto bg-white p-4 sm:p-6 lg:p-10">
+                                        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 md:gap-10">
                                             <div className="space-y-8">
                                                 <h3 className="font-black text-xs uppercase tracking-[0.2em] text-slate-400 flex items-center gap-2">
                                                     <span className="h-2 w-2 rounded-full bg-blue-600" />
@@ -175,7 +175,7 @@ export default async function ManagerCheckInsPage() {
                                             </div>
                                         </div>
 
-                                        <div className="mt-12 pt-10 border-t border-slate-50">
+                                        <div className="mt-8 border-t border-slate-50 pt-8 sm:mt-12 sm:pt-10">
                                             <h4 className="text-xs font-black text-slate-900 uppercase tracking-[0.2em] mb-6 flex items-center gap-3">
                                                 <div className="h-8 w-8 rounded-xl bg-slate-100 flex items-center justify-center">
                                                     <HistoryIcon className="h-4 w-4 text-slate-500" />

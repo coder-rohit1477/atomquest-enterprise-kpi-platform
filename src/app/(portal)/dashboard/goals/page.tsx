@@ -569,8 +569,8 @@ export default function GoalsPage() {
 
       {/* Goal Modal */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-2xl rounded-[2.5rem] p-0 overflow-hidden border-none shadow-2xl">
-          <DialogHeader className="bg-slate-900 text-white p-10 relative">
+        <DialogContent className="flex w-[calc(100vw-1rem)] max-w-2xl flex-col overflow-hidden rounded-2xl border-none p-0 shadow-2xl sm:w-[calc(100vw-2rem)] sm:rounded-[2.5rem] md:max-h-[90dvh]">
+          <DialogHeader className="shrink-0 bg-slate-900 p-6 text-white relative sm:p-8 lg:p-10">
             <div className="absolute top-0 right-0 w-64 h-64 bg-blue-600/10 rounded-full blur-[100px] -mr-32 -mt-32 pointer-events-none" />
             <DialogTitle className="text-3xl font-black tracking-tight relative z-10">
               {editingGoal
@@ -587,8 +587,9 @@ export default function GoalsPage() {
           </DialogHeader>
           
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="p-10 space-y-8 bg-white">
-              <div className="grid grid-cols-2 gap-8">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="flex min-h-0 flex-1 flex-col bg-white">
+              <div className="min-h-0 flex-1 space-y-6 overflow-y-auto p-4 sm:space-y-8 sm:p-6 lg:p-8">
+              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 sm:gap-8">
                 <FormField
                   control={form.control}
                   name="title"
@@ -714,8 +715,9 @@ export default function GoalsPage() {
                   emptyDescription="Goal lifecycle and progress events will appear here."
                 />
               )}
+              </div>
 
-              <DialogFooter className="pt-8 border-t border-slate-50 gap-4 flex items-center">
+              <DialogFooter className="sticky bottom-0 flex shrink-0 items-center gap-3 border-t border-slate-50 bg-white p-4 sm:p-6 lg:p-8">
                 <Button type="button" variant="ghost" onClick={() => setIsDialogOpen(false)} className="rounded-xl h-12 px-8 font-bold text-slate-400 hover:text-slate-900">
                   Cancel
                 </Button>

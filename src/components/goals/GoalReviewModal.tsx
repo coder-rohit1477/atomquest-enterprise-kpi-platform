@@ -107,8 +107,8 @@ export function GoalReviewModal({ goal, isOpen, onClose, onActionComplete }: Goa
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="flex max-h-[92vh] max-w-2xl flex-col overflow-hidden rounded-3xl border-none p-0 shadow-2xl">
-        <div className="bg-slate-900 p-8 text-white relative overflow-hidden">
+      <DialogContent className="flex w-[calc(100vw-1rem)] max-w-2xl flex-col overflow-hidden rounded-2xl border-none p-0 shadow-2xl sm:w-[calc(100vw-2rem)] sm:rounded-3xl md:max-h-[90dvh]">
+        <div className="relative shrink-0 overflow-hidden bg-slate-900 p-6 text-white sm:p-8">
           <div className="absolute top-0 right-0 w-32 h-32 bg-blue-600/20 rounded-full blur-3xl -mr-16 -mt-16" />
           <DialogHeader className="relative z-10">
             <div className="flex items-center justify-between">
@@ -123,9 +123,9 @@ export function GoalReviewModal({ goal, isOpen, onClose, onActionComplete }: Goa
           </DialogHeader>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-8">
-          <div className="space-y-8 pb-2">
-          <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
+        <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
+          <div className="space-y-6 pb-2 sm:space-y-8">
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 md:gap-8">
             <div className="space-y-2">
               <Label className="text-[10px] uppercase tracking-widest font-bold text-slate-500">Unit of Measure</Label>
               <div className="flex items-center gap-2 p-3 bg-slate-50 rounded-xl border border-slate-100">
@@ -152,7 +152,7 @@ export function GoalReviewModal({ goal, isOpen, onClose, onActionComplete }: Goa
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-8 pt-4 border-t border-slate-100">
+          <div className="grid grid-cols-1 gap-6 border-t border-slate-100 pt-4 sm:grid-cols-2 sm:gap-8">
             <div className="space-y-3">
               <Label htmlFor="target" className="text-sm font-bold text-slate-700">Adjust Target</Label>
               <Input
@@ -207,7 +207,7 @@ export function GoalReviewModal({ goal, isOpen, onClose, onActionComplete }: Goa
           <ActivityTimeline
             title="Review Activity Timeline"
             items={timelineItems}
-            maxHeightClassName="max-h-[280px]"
+            maxHeightClassName="max-h-[260px] sm:max-h-[280px]"
             emptyTitle="No review activity yet"
             emptyDescription="Goal lifecycle events will appear here as decisions and comments are recorded."
           />
@@ -215,7 +215,7 @@ export function GoalReviewModal({ goal, isOpen, onClose, onActionComplete }: Goa
         </div>
 
         {isPendingApproval && (
-          <div className="flex shrink-0 flex-col-reverse gap-3 border-t border-slate-100 bg-slate-50 p-8 sm:flex-row sm:flex-wrap sm:justify-end">
+          <div className="sticky bottom-0 flex shrink-0 flex-col-reverse gap-3 border-t border-slate-100 bg-slate-50 p-4 sm:flex-row sm:flex-wrap sm:justify-end sm:p-6 lg:p-8">
             <Button 
               variant="outline" 
               className="h-11 rounded-xl border-slate-200 px-6 font-semibold text-slate-800 transition-all hover:bg-white disabled:opacity-60"
