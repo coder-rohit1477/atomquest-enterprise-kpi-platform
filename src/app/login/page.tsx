@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
-import { loginAction } from "@/actions/login";
+import { useActionState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
+import { loginAction, type LoginActionState } from "@/actions/login";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,22 +11,32 @@ import { Loader2, Lock, Mail, Shield, ArrowRight, Building2, CheckCircle2 } from
 import { motion } from "framer-motion";
 
 export default function LoginPage() {
-  const [isLoading, setIsLoading] = useState(false);
+  const searchParams = useSearchParams();
+  const initialState: LoginActionState = {};
+  const [state, formAction, isPending] = useActionState(loginAction, initialState);
+  const requestedCallbackUrl = searchParams.get("callbackUrl");
+  const callbackUrl =
+    requestedCallbackUrl && requestedCallbackUrl.startsWith("/")
+      ? requestedCallbackUrl
+      : "/dashboard";
 
   const handleSupportAction = (message: string) => {
     toast.info(message);
   };
 
-  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setIsLoading(true);
+  useEffect(() => {
+    if (state?.error) {
+      toast.error(state.error);
+    }
+  }, [state?.error]);
 
-    const formData = new FormData(event.currentTarget);
-    const result = await loginAction(formData);
+  function applyDemoCredentials(email: string) {
+    const emailInput = document.getElementById("email") as HTMLInputElement | null;
+    const passInput = document.getElementById("password") as HTMLInputElement | null;
 
-    if (result?.error) {
-      toast.error(result.error);
-      setIsLoading(false);
+    if (emailInput && passInput) {
+      emailInput.value = email;
+      passInput.value = "Password123";
     }
   }
 
@@ -125,7 +136,8 @@ export default function LoginPage() {
               <p className="text-slate-500">Access your executive dashboard and team KPIs.</p>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-6">
+            <form action={formAction} className="space-y-6">
+              <input type="hidden" name="callbackUrl" value={callbackUrl} />
               <div className="space-y-2">
                 <Label htmlFor="email" className="text-slate-700 font-medium">Work Email</Label>
                 <div className="relative group">
@@ -137,7 +149,7 @@ export default function LoginPage() {
                     placeholder="name@company.com"
                     required
                     className="pl-11 h-12 bg-slate-50 border-slate-200 focus:bg-white transition-all rounded-xl"
-                    disabled={isLoading}
+                    disabled={isPending}
                   />
                 </div>
               </div>
@@ -161,7 +173,7 @@ export default function LoginPage() {
                     type="password"
                     required
                     className="pl-11 h-12 bg-slate-50 border-slate-200 focus:bg-white transition-all rounded-xl"
-                    disabled={isLoading}
+                    disabled={isPending}
                   />
                 </div>
               </div>
@@ -169,9 +181,9 @@ export default function LoginPage() {
               <Button 
                 type="submit" 
                 className="w-full h-12 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl transition-all shadow-lg shadow-blue-500/20 group" 
-                disabled={isLoading}
+                disabled={isPending}
               >
-                {isLoading ? (
+                {isPending ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Authenticating...
@@ -197,12 +209,7 @@ export default function LoginPage() {
                     key={demo.role}
                     type="button"
                     onClick={() => {
-                      const emailInput = document.getElementById('email') as HTMLInputElement;
-                      const passInput = document.getElementById('password') as HTMLInputElement;
-                      if (emailInput && passInput) {
-                        emailInput.value = demo.email;
-                        passInput.value = "Password123";
-                      }
+                      applyDemoCredentials(demo.email);
                     }}
                     className="flex items-center justify-between p-3 rounded-lg border border-slate-100 hover:border-blue-200 hover:bg-blue-50/50 transition-all text-left group"
                   >
