@@ -107,7 +107,7 @@ export function GoalReviewModal({ goal, isOpen, onClose, onActionComplete }: Goa
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="flex w-[calc(100vw-1rem)] max-w-2xl flex-col overflow-hidden rounded-2xl border-none p-0 shadow-2xl sm:w-[calc(100vw-2rem)] sm:rounded-3xl md:max-h-[90dvh]">
+      <DialogContent className="flex w-[95vw] max-w-2xl max-h-[90vh] flex-col overflow-y-auto rounded-2xl border-none p-0 shadow-2xl sm:rounded-3xl">
         <div className="relative shrink-0 overflow-hidden bg-slate-900 p-6 text-white sm:p-8">
           <div className="absolute top-0 right-0 w-32 h-32 bg-blue-600/20 rounded-full blur-3xl -mr-16 -mt-16" />
           <DialogHeader className="relative z-10">

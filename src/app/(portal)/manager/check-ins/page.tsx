@@ -108,7 +108,7 @@ export default async function ManagerCheckInsPage() {
                                         Review Activity
                                     </Button>
                                 </DialogTrigger>
-                                <DialogContent className="flex w-[calc(100vw-1rem)] max-w-4xl flex-col overflow-hidden rounded-2xl border-none p-0 shadow-2xl sm:w-[calc(100vw-2rem)] sm:rounded-[32px] md:max-h-[90dvh]">
+                                <DialogContent className="flex w-[95vw] max-w-4xl max-h-[90vh] flex-col overflow-y-auto rounded-2xl border-none p-0 shadow-2xl sm:rounded-[32px]">
                                     <div className="relative shrink-0 overflow-hidden bg-slate-900 p-6 text-white sm:p-8 lg:p-10">
                                         <div className="absolute top-0 right-0 w-64 h-64 bg-blue-600/10 rounded-full blur-[100px] -mr-32 -mt-32 pointer-events-none" />
                                         <DialogHeader>

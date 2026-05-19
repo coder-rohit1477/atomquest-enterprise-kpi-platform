@@ -93,7 +93,7 @@ export default async function CheckInsPage() {
                           Execute Update
                         </Button>
                       </DialogTrigger>
-                      <DialogContent className="flex w-[calc(100vw-1rem)] max-w-2xl flex-col overflow-hidden rounded-2xl border-none p-0 shadow-2xl sm:w-[calc(100vw-2rem)] sm:rounded-[2.5rem] md:max-h-[90dvh]">
+                      <DialogContent className="flex w-[95vw] max-w-2xl max-h-[90vh] flex-col overflow-y-auto rounded-2xl border-none p-0 shadow-2xl sm:rounded-[2.5rem]">
                         <div className="relative shrink-0 bg-slate-900 p-6 text-white sm:p-8 lg:p-10">
                            <div className="absolute top-0 right-0 w-64 h-64 bg-blue-600/10 rounded-full blur-[100px] -mr-32 -mt-32" />
                            <DialogHeader className="relative z-10">
@@ -135,7 +135,7 @@ export default async function CheckInsPage() {
                         <History className="h-5 w-5 text-slate-500" />
                       </Button>
                     </DialogTrigger>
-                    <DialogContent className="flex w-[calc(100vw-1rem)] max-w-3xl flex-col overflow-hidden rounded-2xl border-none p-0 shadow-2xl sm:w-[calc(100vw-2rem)] sm:rounded-[2.5rem] md:max-h-[90dvh]">
+                    <DialogContent className="flex w-[95vw] max-w-3xl max-h-[90vh] flex-col overflow-y-auto rounded-2xl border-none p-0 shadow-2xl sm:rounded-[2.5rem]">
                        <div className="relative shrink-0 bg-slate-900 p-6 text-white sm:p-8 lg:p-10">
                          <div className="absolute top-0 right-0 w-64 h-64 bg-blue-600/10 rounded-full blur-[100px] -mr-32 -mt-32" />
                          <DialogHeader className="relative z-10">
