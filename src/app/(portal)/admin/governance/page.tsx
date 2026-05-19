@@ -8,6 +8,8 @@ import { Badge } from "@/components/ui/badge";
 
 export const dynamic = "force-dynamic";
 
+
+
 export default async function AdminGovernancePage() {
   const [goalsTotal, pendingApproval, lockedGoals, logsTotal, escalationTotal] = await Promise.all([
     prisma.goal.count(),

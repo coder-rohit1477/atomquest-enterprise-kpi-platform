@@ -10,6 +10,8 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Goal, GoalStatus, ProgressHistory, QuarterlyCheckIn, User } from "@prisma/client";
 
+export const dynamic = "force-dynamic";
+
 type ReportGoal = Goal & {
   user: User;
   checkIns: QuarterlyCheckIn[];

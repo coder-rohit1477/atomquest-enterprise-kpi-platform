@@ -7,6 +7,8 @@ import { Progress } from "@/components/ui/progress";
 
 export const dynamic = "force-dynamic";
 
+
+
 export default async function AdminReportsPage() {
   const [goalsTotal, checkInsTotal, completedCheckIns, employeeCount] = await Promise.all([
     prisma.goal.count(),

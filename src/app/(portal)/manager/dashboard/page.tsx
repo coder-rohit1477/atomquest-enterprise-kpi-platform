@@ -7,6 +7,8 @@ import { CheckCircle2, Clock, Users, ShieldCheck, Briefcase, Share2, Target } fr
 import { Goal, ApprovalHistory, User, SharedGoalAssignment, QuarterlyCheckIn } from "@prisma/client";
 import { Badge } from "@/components/ui/badge";
 
+export const dynamic = "force-dynamic";
+
 type GoalWithHistory = Goal & { history: ApprovalHistory[] };
 type EmployeeWithGoals = User & { goals: GoalWithHistory[] };
 
