@@ -1,5 +1,11 @@
 import type { NextAuthConfig } from "next-auth";
 
+function getRoleHome(role?: string | null) {
+  if (role === "ADMIN") return "/admin";
+  if (role === "MANAGER") return "/manager/dashboard";
+  return "/dashboard";
+}
+
 export const authConfig = {
   pages: {
     signIn: "/login",
@@ -7,17 +13,32 @@ export const authConfig = {
   callbacks: {
     authorized({ auth, request: { nextUrl } }) {
       const isLoggedIn = !!auth?.user;
-      const isProtectedRoute = nextUrl.pathname.startsWith("/dashboard") || 
-                              nextUrl.pathname.startsWith("/manager") || 
-                              nextUrl.pathname.startsWith("/admin") ||
-                              nextUrl.pathname.startsWith("/reports");
-      
+      const role = auth?.user?.role;
+      const pathname = nextUrl.pathname;
+      const isProtectedRoute =
+        pathname.startsWith("/dashboard") ||
+        pathname.startsWith("/manager") ||
+        pathname.startsWith("/admin") ||
+        pathname.startsWith("/reports");
+
       if (isProtectedRoute) {
-        if (isLoggedIn) return true;
-        return false; // Redirect to login
-      } else if (isLoggedIn && nextUrl.pathname === "/login") {
-        return Response.redirect(new URL("/dashboard", nextUrl));
+        if (!isLoggedIn) return false;
+
+        if (pathname.startsWith("/admin") && role !== "ADMIN") {
+          return Response.redirect(new URL(getRoleHome(role), nextUrl));
+        }
+
+        if (pathname.startsWith("/manager") && role !== "MANAGER" && role !== "ADMIN") {
+          return Response.redirect(new URL(getRoleHome(role), nextUrl));
+        }
+
+        return true;
       }
+
+      if (isLoggedIn && (pathname === "/login" || pathname === "/")) {
+        return Response.redirect(new URL(getRoleHome(role), nextUrl));
+      }
+
       return true;
     },
     async jwt({ token, user, trigger, session }) {
