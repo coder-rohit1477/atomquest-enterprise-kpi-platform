@@ -6,6 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { getRecentEscalationLogs, runEscalationChecks } from "@/lib/escalation";
 
+export const dynamic = "force-dynamic";
+
 export default async function AdminEscalationsPage() {
   const session = await auth();
   const user = session?.user as { role?: string } | undefined;

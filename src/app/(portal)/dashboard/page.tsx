@@ -6,6 +6,8 @@ import Link from "next/link";
 import prisma from "@/lib/prisma";
 import { formatDistanceToNow } from "date-fns";
 
+export const dynamic = "force-dynamic";
+
 export default async function DashboardPage() {
   const session = await auth();
   const user = session?.user as { id?: string; role?: string; name?: string | null };
