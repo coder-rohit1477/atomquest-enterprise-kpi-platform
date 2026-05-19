@@ -5,6 +5,7 @@ import { AuthError } from "next-auth";
 
 export type LoginActionState = {
   error?: string;
+  redirectTo?: string;
 };
 
 export async function loginAction(
@@ -23,9 +24,9 @@ export async function loginAction(
     await signIn("credentials", {
       email,
       password,
-      redirectTo: callbackUrl,
+      redirect: false,
     });
-    return {};
+    return { redirectTo: callbackUrl };
   } catch (error) {
     if (error instanceof AuthError) {
       switch (error.type) {

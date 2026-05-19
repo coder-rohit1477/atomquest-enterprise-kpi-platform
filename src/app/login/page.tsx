@@ -1,7 +1,8 @@
 "use client";
 
 import { useActionState, useEffect } from "react";
-import { useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { loginAction, type LoginActionState } from "@/actions/login";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,7 +12,10 @@ import { Loader2, Lock, Mail, Shield, ArrowRight, Building2, CheckCircle2 } from
 import { motion } from "framer-motion";
 
 export default function LoginPage() {
+  const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
+  const { data: session, status } = useSession();
   const initialState: LoginActionState = {};
   const [state, formAction, isPending] = useActionState(loginAction, initialState);
   const requestedCallbackUrl = searchParams.get("callbackUrl");
@@ -19,6 +23,11 @@ export default function LoginPage() {
     requestedCallbackUrl && requestedCallbackUrl.startsWith("/")
       ? requestedCallbackUrl
       : "/dashboard";
+
+  const role = session?.user?.role;
+  const roleHome =
+    role === "ADMIN" ? "/admin" : role === "MANAGER" ? "/manager/dashboard" : "/dashboard";
+  const redirectTarget = callbackUrl !== "/login" ? callbackUrl : roleHome;
 
   const handleSupportAction = (message: string) => {
     toast.info(message);
@@ -29,6 +38,17 @@ export default function LoginPage() {
       toast.error(state.error);
     }
   }, [state?.error]);
+
+  useEffect(() => {
+    if (!state?.redirectTo) return;
+    window.location.assign(state.redirectTo);
+  }, [state?.redirectTo]);
+
+  useEffect(() => {
+    if (status !== "authenticated") return;
+    if (pathname === redirectTarget) return;
+    router.replace(redirectTarget);
+  }, [status, pathname, redirectTarget, router]);
 
   function applyDemoCredentials(email: string) {
     const emailInput = document.getElementById("email") as HTMLInputElement | null;
@@ -45,6 +65,14 @@ export default function LoginPage() {
     { title: "Global Goal Alignment", desc: "Align individual targets with organizational KPIs." },
     { title: "Real-time Analytics", desc: "Performance insights across every department." }
   ];
+
+  if (status === "loading" || status === "authenticated") {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-slate-50">
+        <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen flex-col md:flex-row bg-white overflow-hidden">
