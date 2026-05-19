@@ -1,10 +1,9 @@
-import { auth, signOut } from "@/auth";
+import { auth } from "@/auth";
 import Link from "next/link";
 import { 
   LayoutDashboard, 
   Target, 
   Users, 
-  LogOut, 
   ShieldCheck, 
   Briefcase,
   Shield,
@@ -12,7 +11,7 @@ import {
   CheckSquare,
   AlertTriangle
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { LogoutButton } from "@/components/auth/LogoutButton";
 
 export default async function Sidebar() {
   const session = await auth();
@@ -94,18 +93,7 @@ export default async function Sidebar() {
         </div>
 
         <div className="space-y-2">
-          <form action={async () => {
-            "use server";
-            await signOut({ redirectTo: "/login" });
-          }}>
-            <Button 
-              variant="ghost" 
-              className="w-full justify-start text-slate-400 hover:text-white hover:bg-red-500/10 h-12 rounded-xl group transition-all"
-            >
-              <LogOut className="mr-3 h-4 w-4 text-slate-500 group-hover:text-red-500 transition-colors" />
-              <span className="text-sm font-bold uppercase tracking-widest">Terminate Session</span>
-            </Button>
-          </form>
+          <LogoutButton />
         </div>
       </div>
     </div>
